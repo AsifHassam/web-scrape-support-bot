@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ScrapeProgress } from '@/utils/scraper';
+import { ScrapeProgress, ScrapeResult } from '@/utils/scraper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Copy } from 'lucide-react';
 
 interface KnowledgeBaseProps {
-  scrapeResult: ScrapeProgress;
+  scrapeResult: ScrapeProgress | ScrapeResult;
 }
 
 export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
   
+  // Extract the results array from either ScrapeProgress or ScrapeResult
+  const results = 'results' in scrapeResult ? scrapeResult.results : [];
+  
   const copyContent = () => {
-    const content = scrapeResult.results
+    const content = results
       .map(result => `${result.title}\n${result.url}\n${result.content}\n`)
       .join('\n');
     
@@ -25,7 +28,7 @@ export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
     setTimeout(() => setCopied(false), 2000);
   };
   
-  if (scrapeResult.status !== 'complete') {
+  if (!results.length) {
     return null;
   }
   
@@ -53,12 +56,12 @@ export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                 <p className="text-sm text-gray-500">Pages Scraped</p>
-                <p className="text-3xl font-bold">{scrapeResult.results.length}</p>
+                <p className="text-3xl font-bold">{results.length}</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                 <p className="text-sm text-gray-500">Content Size</p>
                 <p className="text-3xl font-bold">
-                  {Math.round(scrapeResult.results.reduce((acc, curr) => acc + curr.content.length, 0) / 1024)} KB
+                  {Math.round(results.reduce((acc, curr) => acc + curr.content.length, 0) / 1024)} KB
                 </p>
               </div>
             </div>
@@ -92,7 +95,7 @@ export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
           
           <TabsContent value="pages" className="mt-0">
             <ul className="divide-y">
-              {scrapeResult.results.map((result, index) => (
+              {results.map((result, index) => (
                 <li key={index} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                   <a href={result.url} target="_blank" rel="noopener noreferrer" className="flex flex-col">
                     <span className="font-medium text-primary hover:underline">{result.title}</span>
@@ -105,7 +108,7 @@ export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
           
           <TabsContent value="content" className="mt-0">
             <div className="max-h-96 overflow-y-auto">
-              {scrapeResult.results.map((result, index) => (
+              {results.map((result, index) => (
                 <div key={index} className="p-4 border-b">
                   <h3 className="font-medium">{result.title}</h3>
                   <p className="text-xs text-gray-500 mb-2">{result.url}</p>

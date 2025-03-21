@@ -1,4 +1,3 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'bot';
@@ -6,6 +5,9 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+import { ScrapeResult as ScraperResult } from './scraper';
+
+// Define a compatible type that matches what KnowledgeBase expects
 export interface ScrapeResult {
   status: 'complete';
   results: {

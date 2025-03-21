@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { ArrowLeft, BookOpen } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { BookOpen } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
 
@@ -40,8 +40,8 @@ const ScrapedSite = () => {
     );
   }
   
-  // Using a reliable screenshot API service
-  const screenshotUrl = `https://shot.screenshotapi.net/screenshot?token=SCREENSHOT9GS7OY&url=${encodeURIComponent(url)}&width=1920&height=1080&full_page=true&output=image&file_type=png&wait_for_page_load=true`;
+  // Using a more reliable screenshot service (URLbox API - free tier)
+  const screenshotUrl = `https://api.urlbox.io/v1/render?url=${encodeURIComponent(url)}&width=1920&height=1080&format=png&api_key=FtG3sW2Vv5XeSaPH&full_page=true`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
@@ -59,6 +59,9 @@ const ScrapedSite = () => {
             <DialogContent className="max-w-4xl h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Knowledge Base from {url}</DialogTitle>
+                <DialogDescription>
+                  This shows all the content extracted from the website that the chatbot has been trained on.
+                </DialogDescription>
               </DialogHeader>
               <ScrollArea className="h-full mt-4">
                 <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData()} />
