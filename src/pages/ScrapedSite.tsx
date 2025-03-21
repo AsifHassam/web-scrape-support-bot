@@ -15,6 +15,7 @@ const ScrapedSite = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [screenshotError, setScreenshotError] = useState(false);
   const { url } = (location.state as LocationState) || { url: '' };
   
   useEffect(() => {
@@ -36,7 +37,7 @@ const ScrapedSite = () => {
   }
   
   // Use a more reliable service for full-page screenshots
-  const screenshotUrl = `https://image.thum.io/get/width/1200/fullpage/${encodeURIComponent(url)}`;
+  const screenshotUrl = `https://api.screenshotone.com/take?access_key=MztaPQcSqd7kDw&url=${encodeURIComponent(url)}&full_page=true&device_scale_factor=1`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
@@ -56,20 +57,35 @@ const ScrapedSite = () => {
           </div>
         </div>
         
-        <Card className="overflow-hidden border-2 shadow-xl h-[70vh]">
+        <Card className="overflow-hidden border-2 shadow-xl h-[80vh]">
           <ScrollArea className="h-full w-full">
-            <div className="relative w-full bg-gray-100 dark:bg-gray-800">
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
-                Loading website preview...
+            {screenshotError ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <p className="text-red-500 mb-4">Failed to load screenshot</p>
+                <p className="text-gray-600 max-w-md">
+                  We couldn't load a screenshot of {url}. You can still use the chatbot
+                  to ask questions about the website content.
+                </p>
               </div>
-              <img
-                src={screenshotUrl}
-                alt="Website screenshot"
-                className="w-full object-contain"
-                onLoad={() => console.log("Screenshot loaded")}
-                onError={(e) => console.error("Error loading screenshot", e)}
-              />
-            </div>
+            ) : (
+              <div className="relative w-full bg-gray-100 dark:bg-gray-800 min-h-[80vh]">
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                  Loading website preview...
+                </div>
+                <img
+                  src={screenshotUrl}
+                  alt="Website screenshot"
+                  className="w-full object-contain"
+                  onLoad={() => {
+                    console.log("Screenshot loaded successfully");
+                  }}
+                  onError={(e) => {
+                    console.error("Error loading screenshot", e);
+                    setScreenshotError(true);
+                  }}
+                />
+              </div>
+            )}
           </ScrollArea>
         </Card>
         
