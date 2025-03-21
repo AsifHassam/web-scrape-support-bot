@@ -1,12 +1,298 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import UrlForm from '@/components/UrlForm';
+import KnowledgeBase from '@/components/KnowledgeBase';
+import ChatWidget from '@/components/ChatWidget';
+import { ScrapeProgress, initialScrapeProgress } from '@/utils/scraper';
+import { Button } from '@/components/ui/button';
+import { ArrowDown, Brain, Bot, Database, Globe } from 'lucide-react';
 
 const Index = () => {
+  const [scrapeResult, setScrapeResult] = useState<ScrapeProgress>(initialScrapeProgress);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setShowScrollIndicator(false);
+      } else {
+        setShowScrollIndicator(true);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+      <Navbar />
+      
+      <main className="pt-28 pb-20">
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 flex flex-col items-center justify-center min-h-[80vh] relative">
+          <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4 animate-bounce-small">
+              <span>Website Knowledge Extractor</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-balance tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
+              Transform Your Website Into An Intelligent Support Bot
+            </h1>
+            
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-balance">
+              Enter your website URL below, and we'll extract all the information to create a custom support bot that can answer questions about your content.
+            </p>
+            
+            <div className="pt-6 w-full">
+              <UrlForm />
+            </div>
+          </div>
+          
+          {showScrollIndicator && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full h-12 w-12 bg-white/80 dark:bg-gray-800/80 shadow-md hover:shadow-lg transition-all duration-300"
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                <ArrowDown className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              </Button>
+            </div>
+          )}
+        </section>
+        
+        {/* Features Section */}
+        <section id="features" className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance text-gray-900 dark:text-white">
+              Powerful Features, Simple Interface
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              Our intelligent scraping technology turns your website content into a powerful knowledge base.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <Globe className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Intelligent Web Scraping</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Our advanced scraping technology extracts content from your entire website, including subpages and hidden content.
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <Database className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Knowledge Base Creation</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Automatically organize and structure your website content into a comprehensive knowledge base.
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">AI-Powered Understanding</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Our advanced algorithms understand the context and relationships between different pieces of content.
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <Bot className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Instant Support Bot</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Instantly transform your knowledge base into a chat support bot that can answer customer questions.
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="h-6 w-6 text-primary"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Privacy Focused</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                We prioritize your data security. Your website content is processed securely and never shared.
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start hover-scale border border-gray-100 dark:border-gray-700">
+              <div className="bg-primary/10 p-3 rounded-lg mb-4">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="h-6 w-6 text-primary"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                  <circle cx="12" cy="8" r="2"></circle>
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Custom Branding</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Personalize your support bot with your brand colors, logo, and messaging to create a seamless experience.
+              </p>
+            </div>
+          </div>
+        </section>
+        
+        {/* How It Works Section */}
+        <section id="how-it-works" className="bg-gray-50 dark:bg-gray-900/50 py-16 md:py-24">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance text-gray-900 dark:text-white">
+                How It Works
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300">
+                Three simple steps to create your intelligent support bot
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <span className="text-xl font-bold text-white">1</span>
+                  </div>
+                  <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10 transform -translate-x-8"></div>
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Enter Your URL</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Simply paste your website URL into our tool to begin the scraping process.
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <span className="text-xl font-bold text-white">2</span>
+                  </div>
+                  <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10 transform -translate-x-8"></div>
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Extract Knowledge</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Our system crawls your website, extracting and organizing all the content.
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <span className="text-xl font-bold text-white">3</span>
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Deploy Your Bot</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Instantly activate your intelligent support bot to assist your website visitors.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Knowledge Base Section (conditional) */}
+        {scrapeResult.status === 'complete' && (
+          <section id="knowledge-base" className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="max-w-4xl mx-auto">
+              <KnowledgeBase scrapeResult={scrapeResult} />
+            </div>
+          </section>
+        )}
+        
+        {/* CTA Section */}
+        <section id="get-started" className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="max-w-4xl mx-auto bg-gradient-to-r from-primary/80 to-primary rounded-2xl overflow-hidden shadow-xl">
+            <div className="px-6 md:px-12 py-12 md:py-16 text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+                Ready to Transform Your Website?
+              </h2>
+              <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
+                Enter your website URL above to create an intelligent support bot in minutes. No coding required.
+              </p>
+              <Button 
+                size="lg"
+                variant="secondary"
+                className="bg-white text-primary hover:bg-gray-100 hover-scale"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                Start Now
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
+      
+      <footer className="bg-gray-100 dark:bg-gray-900 py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <a href="/" className="flex items-center space-x-2">
+                <span className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="w-5 h-5 text-white"
+                  >
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="17" x2="12" y2="17"></line>
+                  </svg>
+                </span>
+                <span className="text-xl font-semibold text-gray-900 dark:text-white">WebKnow</span>
+              </a>
+            </div>
+            
+            <div className="flex space-x-6">
+              <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+                Privacy Policy
+              </a>
+              <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+                Terms of Service
+              </a>
+              <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+                Contact
+              </a>
+            </div>
+          </div>
+          
+          <div className="text-center mt-8">
+            <p className="text-gray-500 dark:text-gray-400">
+              © {new Date().getFullYear()} WebKnow. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+      
+      {/* Chat Widget component always visible */}
+      <ChatWidget />
     </div>
   );
 };
