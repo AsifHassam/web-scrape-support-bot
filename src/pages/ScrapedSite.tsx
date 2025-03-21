@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
@@ -45,32 +45,46 @@ const ScrapedSite = () => {
   const screenshotUrl = `https://image.thum.io/get/width/1920/crop/900/maxAge/1/noanimate/https://${url.replace(/^https?:\/\//, '')}`;
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
-      <div className="container mx-auto p-0 sm:p-0 md:p-0 lg:p-0 h-screen flex flex-col">
-        <div className="fixed bottom-24 right-24 z-10 flex flex-col gap-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button 
-                className="rounded-full shadow-lg hover:shadow-xl" 
-                size="icon"
-              >
-                <BookOpen className="h-6 w-6" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl h-[80vh]">
-              <DialogHeader>
-                <DialogTitle>Knowledge Base from {url}</DialogTitle>
-                <DialogDescription>
-                  This shows all the content extracted from the website that the chatbot has been trained on.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="h-full mt-4">
-                <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData()} />
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
-        </div>
-        
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      <div className="fixed top-4 left-4 z-10">
+        <Button 
+          variant="outline"
+          size="sm"
+          className="bg-white dark:bg-gray-800 shadow-sm"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Dashboard
+        </Button>
+      </div>
+      
+      <div className="fixed top-4 right-4 z-10 flex gap-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline"
+              size="sm"
+              className="bg-white dark:bg-gray-800 shadow-sm flex items-center"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              View Knowledge Base
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Knowledge Base from {url}</DialogTitle>
+              <DialogDescription>
+                This shows all the content extracted from the website that the chatbot has been trained on.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="h-full mt-4">
+              <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData()} />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <div className="container mx-auto p-0 h-screen flex flex-col">
         <Card className="flex-1 overflow-hidden border-none shadow-none rounded-none">
           <ScrollArea className="h-full w-full">
             {screenshotError ? (
@@ -106,6 +120,13 @@ const ScrapedSite = () => {
       
       {/* The chat widget will appear here */}
       <ChatWidget />
+      
+      <div className="fixed bottom-24 right-6 z-10 pointer-events-none flex flex-col items-end">
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg mb-2 pointer-events-auto opacity-80 hover:opacity-100 transition-opacity">
+          <p className="text-xs text-gray-500">Your AI assistant is ready!</p>
+          <p className="text-sm font-medium">Ask questions about {url}</p>
+        </div>
+      </div>
     </div>
   );
 };
