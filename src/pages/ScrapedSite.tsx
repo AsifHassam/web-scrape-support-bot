@@ -36,8 +36,8 @@ const ScrapedSite = () => {
     );
   }
   
-  // Use a more reliable service for full-page screenshots
-  const screenshotUrl = `https://api.screenshotone.com/take?access_key=MztaPQcSqd7kDw&url=${encodeURIComponent(url)}&full_page=true&device_scale_factor=1`;
+  // Using a free public screenshot service without requiring API key
+  const screenshotUrl = `https://api.urlbox.io/v1/screenshot?url=${encodeURIComponent(url)}&format=png&width=1200&height=800&force=true&full_page=true`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">

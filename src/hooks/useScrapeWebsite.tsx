@@ -27,18 +27,15 @@ export function useScrapeWebsite() {
         const knowledge = progress.results.flatMap(result => {
           // Break content into paragraphs for more granular knowledge chunks
           const paragraphs = result.content.split('\n').filter(p => p.trim().length > 0);
-          return paragraphs.length > 0 ? paragraphs : [result.content];
+          
+          // Add title as a separate knowledge entry for better context
+          const titleEntry = `${result.title} - ${result.url}`;
+          
+          return [titleEntry, ...(paragraphs.length > 0 ? paragraphs : [result.content])];
         });
         
-        // Also add titles to knowledge base for better context
-        progress.results.forEach(result => {
-          if (result.title) {
-            knowledge.push(`${result.title} - ${result.url}`);
-          }
-        });
-        
-        console.log(`Training chatbot with ${knowledge.length} knowledge entries`);
-        chatbotService.updateKnowledgeBase(knowledge);
+        console.log(`Training chatbot with ${knowledge.length} knowledge entries for ${url}`);
+        chatbotService.updateKnowledgeBase(knowledge, url);
         
         toast.success("Website scraped successfully! Bot is ready to answer questions.");
         

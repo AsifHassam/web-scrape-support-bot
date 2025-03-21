@@ -11,19 +11,32 @@ export interface ChatMessage {
 export class ChatbotService {
   private knowledgeBase: string[];
   private responseDelay: number = 500; // ms
+  private websiteUrl: string | null = null;
   
   constructor(knowledge: string[] = []) {
     this.knowledgeBase = knowledge;
+    console.log("ChatbotService initialized with knowledge entries:", knowledge.length);
   }
   
-  public updateKnowledgeBase(knowledge: string[]): void {
+  public updateKnowledgeBase(knowledge: string[], websiteUrl?: string): void {
     this.knowledgeBase = knowledge;
-    console.log("Knowledge base updated with entries:", knowledge.length);
+    if (websiteUrl) {
+      this.websiteUrl = websiteUrl;
+    }
+    console.log(`Knowledge base updated with ${knowledge.length} entries for website: ${this.websiteUrl || 'unknown'}`);
+    
+    // Log a sample of the knowledge to validate content
+    if (knowledge.length > 0) {
+      console.log("Knowledge sample:", knowledge.slice(0, 3));
+    }
   }
   
   public async sendMessage(message: string): Promise<ChatMessage> {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, this.responseDelay));
+    
+    console.log("Processing user message:", message);
+    console.log("Knowledge base size:", this.knowledgeBase.length);
     
     // Generate a response based on the knowledge base and user message
     let response = this.findRelevantResponse(message);
@@ -41,12 +54,12 @@ export class ChatbotService {
     
     // Handle greeting patterns
     if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-      return "Hello! How can I help you today?";
+      return `Hello! I'm your support bot for ${this.websiteUrl || 'this website'}. How can I help you today?`;
     } 
     
     // Handle self-identification questions
     if (lowerMessage.includes("who are you") || lowerMessage.includes("what are you")) {
-      return "I'm a support bot trained on the content from the website you provided. I can answer questions based on that information.";
+      return `I'm a support bot trained on the content from ${this.websiteUrl || 'the website you provided'}. I can answer questions based on that information.`;
     }
     
     // If knowledge base is empty, provide a fallback response
@@ -54,32 +67,63 @@ export class ChatbotService {
       return "I don't have any information to work with yet. Please try scraping the website again.";
     }
 
-    // Search for relevant information in the knowledge base
-    const relevantPieces: string[] = [];
-    const messageWords = lowerMessage.split(/\s+/);
+    // Tokenize the message into meaningful words for better matching
+    const messageWords = lowerMessage
+      .replace(/[.,?!;:()"'-]/g, ' ')  // Remove punctuation
+      .split(/\s+/)                    // Split by whitespace
+      .filter(word => word.length > 2 && !this.isStopWord(word)); // Remove stop words and very short words
     
-    // Find relevant content based on keyword matching
-    for (const content of this.knowledgeBase) {
-      const lowerContent = content.toLowerCase();
-      
-      // Check if any significant word from the query appears in the content
-      const hasRelevantKeywords = messageWords
-        .filter(word => word.length > 3) // Only consider significant words
-        .some(word => lowerContent.includes(word));
-      
-      if (hasRelevantKeywords) {
-        relevantPieces.push(content);
-      }
+    console.log("Searching for keywords:", messageWords);
+    
+    if (messageWords.length === 0) {
+      return `I need more specific information to help you. What would you like to know about ${this.websiteUrl || 'this website'}?`;
     }
+    
+    // Calculate relevance scores for each knowledge entry
+    const scoredContent = this.knowledgeBase.map(content => {
+      const lowerContent = content.toLowerCase();
+      let score = 0;
+      
+      // Score based on exact keyword matches
+      messageWords.forEach(word => {
+        if (lowerContent.includes(word)) {
+          score += 1;
+        }
+      });
+      
+      return { content, score };
+    });
+    
+    // Sort by relevance score (highest first)
+    scoredContent.sort((a, b) => b.score - a.score);
+    
+    // Get the top relevant pieces (those with any matches)
+    const relevantPieces = scoredContent
+      .filter(item => item.score > 0)
+      .map(item => item.content);
+    
+    console.log(`Found ${relevantPieces.length} relevant pieces of content`);
     
     // Construct the response
     if (relevantPieces.length > 0) {
-      // Get a random piece of relevant content
-      const randomIndex = Math.floor(Math.random() * relevantPieces.length);
-      return `Based on the website content: ${relevantPieces[randomIndex]}`;
+      // For demo purposes, just return the highest scoring relevant content
+      // In a real implementation, we would use an LLM to synthesize a coherent answer
+      return `Based on the website content: ${relevantPieces[0]}`;
     }
     
-    return "I couldn't find specific information about that in the website content. Is there something else I can help with?";
+    return `I couldn't find specific information about that in the content from ${this.websiteUrl || 'the website'}. Is there something else I can help with?`;
+  }
+  
+  // Simple list of English stop words
+  private isStopWord(word: string): boolean {
+    const stopWords = new Set([
+      'the', 'and', 'is', 'in', 'it', 'to', 'of', 'for', 'with', 'on', 'at', 'from', 
+      'by', 'about', 'as', 'an', 'are', 'be', 'been', 'being', 'was', 'were', 'will', 
+      'would', 'should', 'can', 'could', 'may', 'might', 'must', 'shall', 'that', 'this', 
+      'these', 'those', 'then', 'than', 'there', 'their', 'they', 'them', 'what', 'when', 
+      'where', 'which', 'who', 'whom', 'whose', 'how', 'why'
+    ]);
+    return stopWords.has(word);
   }
 }
 
