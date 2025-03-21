@@ -9,6 +9,7 @@ import { BookOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
+import { ScrapeProgress } from '@/utils/scraper';
 
 interface LocationState {
   url: string;
@@ -40,8 +41,8 @@ const ScrapedSite = () => {
     );
   }
   
-  // Using a more reliable screenshot service (URLbox API - free tier)
-  const screenshotUrl = `https://api.urlbox.io/v1/render?url=${encodeURIComponent(url)}&width=1920&height=1080&format=png&api_key=FtG3sW2Vv5XeSaPH&full_page=true`;
+  // Using the original screenshot method
+  const screenshotUrl = `https://image.thum.io/get/width/1920/crop/900/maxAge/1/noanimate/https://${url.replace(/^https?:\/\//, '')}`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">

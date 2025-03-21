@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Copy } from 'lucide-react';
 
 interface KnowledgeBaseProps {
-  scrapeResult: ScrapeProgress | ScrapeResult;
+  scrapeResult: ScrapeProgress | ScrapeResult | any;
 }
 
 export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
