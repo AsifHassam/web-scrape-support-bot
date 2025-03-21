@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
 import { ArrowLeft } from 'lucide-react';
 
@@ -34,9 +35,8 @@ const ScrapedSite = () => {
     );
   }
   
-  // Generate the preview URL for the site screenshot
-  // We're using a free service for website screenshots
-  const screenshotUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+  // Use a more reliable service for full-page screenshots
+  const screenshotUrl = `https://image.thum.io/get/width/1200/fullpage/${encodeURIComponent(url)}`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
@@ -56,19 +56,21 @@ const ScrapedSite = () => {
           </div>
         </div>
         
-        <Card className="overflow-hidden border-2 shadow-xl">
-          <div className="relative aspect-video w-full bg-gray-100 dark:bg-gray-800">
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
-              Loading website preview...
+        <Card className="overflow-hidden border-2 shadow-xl h-[70vh]">
+          <ScrollArea className="h-full w-full">
+            <div className="relative w-full bg-gray-100 dark:bg-gray-800">
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                Loading website preview...
+              </div>
+              <img
+                src={screenshotUrl}
+                alt="Website screenshot"
+                className="w-full object-contain"
+                onLoad={() => console.log("Screenshot loaded")}
+                onError={(e) => console.error("Error loading screenshot", e)}
+              />
             </div>
-            <img
-              src={screenshotUrl}
-              alt="Website screenshot"
-              className="w-full h-full object-contain"
-              onLoad={() => console.log("Screenshot loaded")}
-              onError={(e) => console.error("Error loading screenshot", e)}
-            />
-          </div>
+          </ScrollArea>
         </Card>
         
         <div className="mt-6 text-center">

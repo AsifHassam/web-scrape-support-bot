@@ -18,33 +18,15 @@ export class ChatbotService {
   
   public updateKnowledgeBase(knowledge: string[]): void {
     this.knowledgeBase = knowledge;
+    console.log("Knowledge base updated with entries:", knowledge.length);
   }
   
   public async sendMessage(message: string): Promise<ChatMessage> {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, this.responseDelay));
     
-    // Generate a simple response based on the message
-    let response = "I'm sorry, I don't have enough information to answer that question.";
-    
-    const lowerMessage = message.toLowerCase();
-    
-    // Simple pattern matching for demo purposes
-    if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-      response = "Hello! How can I help you today?";
-    } else if (lowerMessage.includes("help")) {
-      response = "I'm here to help! You can ask me questions about the website I was trained on.";
-    } else if (lowerMessage.includes("who are you") || lowerMessage.includes("what are you")) {
-      response = "I'm a support bot trained on the content from the website you provided. I can answer questions based on that information.";
-    } else if (this.knowledgeBase.length > 0) {
-      // Find a relevant response from the knowledge base
-      for (const knowledge of this.knowledgeBase) {
-        if (knowledge.toLowerCase().includes(lowerMessage)) {
-          response = `Based on the website content: ${knowledge}`;
-          break;
-        }
-      }
-    }
+    // Generate a response based on the knowledge base and user message
+    let response = this.findRelevantResponse(message);
     
     return {
       id: Date.now().toString(),
@@ -52,6 +34,52 @@ export class ChatbotService {
       content: response,
       timestamp: new Date(),
     };
+  }
+
+  private findRelevantResponse(message: string): string {
+    const lowerMessage = message.toLowerCase();
+    
+    // Handle greeting patterns
+    if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
+      return "Hello! How can I help you today?";
+    } 
+    
+    // Handle self-identification questions
+    if (lowerMessage.includes("who are you") || lowerMessage.includes("what are you")) {
+      return "I'm a support bot trained on the content from the website you provided. I can answer questions based on that information.";
+    }
+    
+    // If knowledge base is empty, provide a fallback response
+    if (!this.knowledgeBase || this.knowledgeBase.length === 0) {
+      return "I don't have any information to work with yet. Please try scraping the website again.";
+    }
+
+    // Search for relevant information in the knowledge base
+    const relevantPieces: string[] = [];
+    const messageWords = lowerMessage.split(/\s+/);
+    
+    // Find relevant content based on keyword matching
+    for (const content of this.knowledgeBase) {
+      const lowerContent = content.toLowerCase();
+      
+      // Check if any significant word from the query appears in the content
+      const hasRelevantKeywords = messageWords
+        .filter(word => word.length > 3) // Only consider significant words
+        .some(word => lowerContent.includes(word));
+      
+      if (hasRelevantKeywords) {
+        relevantPieces.push(content);
+      }
+    }
+    
+    // Construct the response
+    if (relevantPieces.length > 0) {
+      // Get a random piece of relevant content
+      const randomIndex = Math.floor(Math.random() * relevantPieces.length);
+      return `Based on the website content: ${relevantPieces[randomIndex]}`;
+    }
+    
+    return "I couldn't find specific information about that in the website content. Is there something else I can help with?";
   }
 }
 

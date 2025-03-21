@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { scrapeWebsite, ScrapeProgress, initialScrapeProgress } from '../utils/scraper';
 import { chatbotService } from '../utils/chatbot';
 
@@ -22,8 +23,24 @@ export function useScrapeWebsite() {
       
       // Extract content for the chatbot knowledge base
       if (progress.status === 'complete') {
-        const knowledge = progress.results.map(result => result.content);
+        // Extract and process the content for the knowledge base
+        const knowledge = progress.results.flatMap(result => {
+          // Break content into paragraphs for more granular knowledge chunks
+          const paragraphs = result.content.split('\n').filter(p => p.trim().length > 0);
+          return paragraphs.length > 0 ? paragraphs : [result.content];
+        });
+        
+        // Also add titles to knowledge base for better context
+        progress.results.forEach(result => {
+          if (result.title) {
+            knowledge.push(`${result.title} - ${result.url}`);
+          }
+        });
+        
+        console.log(`Training chatbot with ${knowledge.length} knowledge entries`);
         chatbotService.updateKnowledgeBase(knowledge);
+        
+        toast.success("Website scraped successfully! Bot is ready to answer questions.");
         
         // Navigate to the scraped site page with the URL as state
         navigate('/scraped-site', { state: { url } });
@@ -39,6 +56,7 @@ export function useScrapeWebsite() {
         error: errorMessage,
       });
       
+      toast.error("Failed to scrape website: " + errorMessage);
       return null;
     } finally {
       setIsLoading(false);
