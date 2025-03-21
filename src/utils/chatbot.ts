@@ -6,12 +6,25 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface ScrapeResult {
+  status: 'complete';
+  results: {
+    url: string;
+    title: string;
+    content: string;
+  }[];
+}
+
 // This is a mock implementation that simulates a chatbot
 // In a real application, this would connect to an AI backend
 export class ChatbotService {
   private knowledgeBase: string[];
   private responseDelay: number = 500; // ms
   private websiteUrl: string | null = null;
+  private knowledgeData: ScrapeResult = {
+    status: 'complete',
+    results: []
+  };
   
   constructor(knowledge: string[] = []) {
     this.knowledgeBase = knowledge;
@@ -25,10 +38,71 @@ export class ChatbotService {
     }
     console.log(`Knowledge base updated with ${knowledge.length} entries for website: ${this.websiteUrl || 'unknown'}`);
     
+    // Store structured data for display in the knowledge base
+    this.knowledgeData = {
+      status: 'complete',
+      results: this.structureKnowledge(knowledge)
+    };
+    
     // Log a sample of the knowledge to validate content
     if (knowledge.length > 0) {
       console.log("Knowledge sample:", knowledge.slice(0, 3));
     }
+  }
+  
+  private structureKnowledge(knowledge: string[]): { url: string, title: string, content: string }[] {
+    // For demonstration, we'll structure the flat knowledge list into page-like components
+    const structured: { url: string, title: string, content: string }[] = [];
+    
+    // Group knowledge items into "pages"
+    let currentTitle = '';
+    let currentContent: string[] = [];
+    
+    knowledge.forEach((item, index) => {
+      // Check if this looks like a title/URL entry (they were combined earlier)
+      if (item.includes(' - http') || item.includes(' - https')) {
+        // If we have a previous title and content, add it to the result
+        if (currentTitle && currentContent.length > 0) {
+          structured.push({
+            url: this.websiteUrl || '',
+            title: currentTitle,
+            content: currentContent.join('\n')
+          });
+        }
+        
+        // Start a new page
+        const parts = item.split(' - ');
+        currentTitle = parts[0];
+        currentContent = [];
+      } else {
+        // Add content to the current page
+        currentContent.push(item);
+      }
+    });
+    
+    // Add the last page if there is one
+    if (currentTitle && currentContent.length > 0) {
+      structured.push({
+        url: this.websiteUrl || '',
+        title: currentTitle,
+        content: currentContent.join('\n')
+      });
+    }
+    
+    // If no structured data was created, make a single generic entry
+    if (structured.length === 0 && knowledge.length > 0) {
+      structured.push({
+        url: this.websiteUrl || '',
+        title: 'Website Content',
+        content: knowledge.join('\n')
+      });
+    }
+    
+    return structured;
+  }
+  
+  public getKnowledgeData(): ScrapeResult {
+    return this.knowledgeData;
   }
   
   public async sendMessage(message: string): Promise<ChatMessage> {

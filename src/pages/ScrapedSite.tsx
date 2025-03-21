@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import KnowledgeBase from '@/components/KnowledgeBase';
+import { chatbotService } from '@/utils/chatbot';
 
 interface LocationState {
   url: string;
@@ -23,7 +26,8 @@ const ScrapedSite = () => {
     if (!url) {
       navigate('/');
     } else {
-      setIsLoading(false);
+      // Give some time for the screenshot to load
+      setTimeout(() => setIsLoading(false), 1000);
     }
   }, [url, navigate]);
   
@@ -36,28 +40,34 @@ const ScrapedSite = () => {
     );
   }
   
-  // Using a free public screenshot service without requiring API key
-  const screenshotUrl = `https://api.urlbox.io/v1/screenshot?url=${encodeURIComponent(url)}&format=png&width=1200&height=800&force=true&full_page=true`;
+  // Using a reliable screenshot API service
+  const screenshotUrl = `https://shot.screenshotapi.net/screenshot?token=SCREENSHOT9GS7OY&url=${encodeURIComponent(url)}&width=1920&height=1080&full_page=true&output=image&file_type=png&wait_for_page_load=true`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <Button 
-            variant="outline" 
-            className="flex items-center space-x-2"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Home</span>
-          </Button>
-          
-          <div className="text-sm text-gray-500">
-            Showing preview for: <span className="font-medium">{url}</span>
-          </div>
+      <div className="container mx-auto p-0 sm:p-0 md:p-0 lg:p-0 h-screen flex flex-col">
+        <div className="fixed bottom-24 right-24 z-10 flex flex-col gap-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                className="rounded-full shadow-lg hover:shadow-xl" 
+                size="icon"
+              >
+                <BookOpen className="h-6 w-6" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Knowledge Base from {url}</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="h-full mt-4">
+                <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData()} />
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
         </div>
         
-        <Card className="overflow-hidden border-2 shadow-xl h-[80vh]">
+        <Card className="flex-1 overflow-hidden border-none shadow-none rounded-none">
           <ScrollArea className="h-full w-full">
             {screenshotError ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -68,14 +78,14 @@ const ScrapedSite = () => {
                 </p>
               </div>
             ) : (
-              <div className="relative w-full bg-gray-100 dark:bg-gray-800 min-h-[80vh]">
+              <div className="relative w-full min-h-screen">
                 <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
                   Loading website preview...
                 </div>
                 <img
                   src={screenshotUrl}
                   alt="Website screenshot"
-                  className="w-full object-contain"
+                  className="w-full h-auto object-contain"
                   onLoad={() => {
                     console.log("Screenshot loaded successfully");
                   }}
@@ -88,14 +98,6 @@ const ScrapedSite = () => {
             )}
           </ScrollArea>
         </Card>
-        
-        <div className="mt-6 text-center">
-          <h2 className="text-2xl font-bold mb-2">Support Bot Ready</h2>
-          <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Your support bot has been trained on content from <span className="font-medium">{url}</span>. 
-            Click the chat button in the bottom right to ask questions about the website content.
-          </p>
-        </div>
       </div>
       
       {/* The chat widget will appear here */}
