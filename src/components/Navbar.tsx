@@ -15,6 +15,14 @@ export const Navbar = () => {
     setIsScrolled(scrollProgress > 0.01);
   }, [scrollProgress]);
   
+  const handleNavLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
   return (
     <header className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out",
@@ -45,14 +53,19 @@ export const Navbar = () => {
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
+            <a 
+              href="#features" 
+              onClick={(e) => handleNavLinkClick(e, 'features')}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+            >
               Features
             </a>
-            <a href="#how-it-works" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => handleNavLinkClick(e, 'how-it-works')}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+            >
               How It Works
-            </a>
-            <a href="#about" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
-              About
             </a>
           </nav>
           

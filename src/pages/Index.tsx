@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import UrlForm from '@/components/UrlForm';
 import KnowledgeBase from '@/components/KnowledgeBase';
-import ChatWidget from '@/components/ChatWidget';
 import { ScrapeProgress, initialScrapeProgress } from '@/utils/scraper';
 import { Button } from '@/components/ui/button';
 import { ArrowDown, Brain, Bot, Database, Globe } from 'lucide-react';
@@ -37,7 +36,7 @@ const Index = () => {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 flex flex-col items-center justify-center min-h-[80vh] relative">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4 animate-bounce-small">
-              <span>Intercom on steroids</span>
+              <span>Intercom On Steroids🔥</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-balance tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
@@ -177,7 +176,7 @@ const Index = () => {
                 How It Works
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                Three simple steps to create your intelligent support bot
+                Four simple steps to create your intelligent support bot
               </p>
             </div>
             
@@ -335,9 +334,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-      
-      {/* Chat Widget component always visible */}
-      <ChatWidget />
     </div>
   );
 };
