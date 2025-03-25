@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -36,7 +37,7 @@ const Index = () => {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 flex flex-col items-center justify-center min-h-[80vh] relative">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4 animate-bounce-small">
-              <span>Website Knowledge Extractor</span>
+              <span>Intercom on steroids</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-balance tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
@@ -180,7 +181,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-4 gap-8 max-w-5xl mx-auto">
               <div className="text-center">
                 <div className="relative">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -188,9 +189,9 @@ const Index = () => {
                   </div>
                   <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10 transform -translate-x-8"></div>
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Enter Your URL</h3>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Import your Data</h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Simply paste your website URL into our tool to begin the scraping process.
+                  Train your AI from various data sources websites, pdfs, etc...
                 </p>
               </div>
               
@@ -201,19 +202,32 @@ const Index = () => {
                   </div>
                   <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10 transform -translate-x-8"></div>
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Extract Knowledge</h3>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Customize</h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Our system crawls your website, extracting and organizing all the content.
+                  Setup your Agent persona and goals. Customize to fit your brand.
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="relative">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <span className="text-xl font-bold text-white">3</span>
+                  </div>
+                  <div className="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10 transform -translate-x-8"></div>
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Deploy</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Add your chatbot to your website or to your existing tools in few clicks.
                 </p>
               </div>
               
               <div className="text-center">
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <span className="text-xl font-bold text-white">3</span>
+                  <span className="text-xl font-bold text-white">4</span>
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Deploy Your Bot</h3>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Monitor</h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Instantly activate your intelligent support bot to assist your website visitors.
+                  Monitor conversations across all channels. Take over your AI chatbot when needed with smart human takeover.
                 </p>
               </div>
             </div>
