@@ -13,5 +13,6 @@ export const generateEmbedCode = (botId: string): string => {
   src="${deployedOrigin}/widget.js" 
   data-bot-id="${botId}" 
   defer
-></script>`;
+></script>
+<!-- If you encounter any issues, make sure this script is placed just before the closing </body> tag -->`;
 };

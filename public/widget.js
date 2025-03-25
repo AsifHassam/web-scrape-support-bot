@@ -184,10 +184,39 @@
     }
     
     try {
-      const response = await fetch(`https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}`);
+      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}`;
+      console.log('Fetching bot configuration from:', apiUrl);
       
-      if (response.ok) {
-        const data = await response.json();
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Bot config response status:', response.status);
+      console.log('Bot config response headers:', {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      });
+      
+      if (!response.ok) {
+        // Try to get the error message text
+        const errorText = await response.text();
+        console.error('Failed to load bot configuration. Status:', response.status, 'Response:', errorText.substring(0, 200) + '...');
+        return;
+      }
+      
+      // First get the raw text to debug what's being returned
+      const responseText = await response.text();
+      console.log('Raw bot config response text preview:', responseText.substring(0, 200) + '...');
+      
+      // Try to parse the response text as JSON
+      try {
+        const data = JSON.parse(responseText);
+        console.log('Parsed bot config data:', data);
+        
         if (data && data.bot) {
           botInfo = {
             name: data.bot.name || 'Support Bot',
@@ -217,9 +246,17 @@
             // Re-render messages to apply any primary color changes
             renderMessages();
           }
+        } else {
+          console.error('Bot data not found in API response:', data);
         }
-      } else {
-        console.error('Failed to load bot configuration:', response.statusText);
+      } catch (parseError) {
+        console.error('Error parsing bot configuration JSON:', parseError);
+        console.error('Invalid JSON response received:', responseText.substring(0, 200) + '...');
+        
+        // Check if the response looks like HTML
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          console.error('Received HTML instead of JSON. This might indicate a server error or redirection.');
+        }
       }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
@@ -367,20 +404,35 @@
       })
         .then(response => {
           console.log('API response status:', response.status);
+          console.log('API response headers:', {
+            contentType: response.headers.get('content-type'),
+            contentLength: response.headers.get('content-length')
+          });
           
           if (!response.ok) {
-            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+            return response.text().then(text => {
+              console.error(`API responded with status ${response.status}: ${response.statusText}`);
+              console.error('Response body preview:', text.substring(0, 200) + '...');
+              throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+            });
           }
 
           // First get the raw text to verify what's being returned
           return response.text().then(text => {
-            console.log('Raw API response text:', text);
+            console.log('Raw API response text preview:', text.substring(0, 200) + '...');
             
             // Try to parse as JSON, but handle if it's not valid JSON
             try {
               return JSON.parse(text);
             } catch (e) {
               console.error('Failed to parse response as JSON:', e);
+              console.error('Invalid JSON received:', text.substring(0, 200) + '...');
+              
+              // Check if the response looks like HTML
+              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                console.error('Received HTML instead of JSON. This might indicate a server error or redirection.');
+              }
+              
               throw new Error('Received invalid JSON response from server');
             }
           });
@@ -437,4 +489,6 @@
   
   // Debug information
   console.log('Chat widget initialized with bot ID:', botId);
+  console.log('Widget script URL:', scriptTag ? scriptTag.getAttribute('src') : 'Unknown');
+  console.log('Host page URL:', window.location.href);
 })();

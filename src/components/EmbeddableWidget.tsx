@@ -5,6 +5,7 @@ import ChatWidget from './ChatWidget';
 
 const EmbeddableWidget = () => {
   const [botId, setBotId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | undefined>(undefined);
   
   useEffect(() => {
     // Find the script tag by looking for widget.js in the src attribute
@@ -30,11 +31,24 @@ const EmbeddableWidget = () => {
         setBotId(dataBot);
       } else {
         console.error('No bot ID found in script tag');
+        setError('Missing data-bot-id attribute in script tag');
       }
     } else {
       console.error('Could not find script tag with widget.js');
+      setError('Could not find the widget script tag');
     }
   }, []);
+  
+  // If there's an error, show it
+  if (error) {
+    return (
+      <div className="chat-widget-container">
+        <div className="chat-widget-button" style={{ backgroundColor: '#f44336' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+      </div>
+    );
+  }
   
   // Only render the ChatWidget if we have a botId
   return botId ? (
