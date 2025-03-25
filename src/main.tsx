@@ -48,6 +48,7 @@ if (typeof window !== 'undefined') {
         const response = await chatbotService.sendMessage(message);
         console.log('Chatbot service response:', response);
         
+        // Return JSON response with proper CORS headers
         return new Response(JSON.stringify({ response: response.content }), {
           status: 200,
           headers: { 

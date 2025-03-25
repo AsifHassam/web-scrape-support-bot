@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -249,7 +250,7 @@
     renderMessages();
     
     setTimeout(() => {
-      // Fixed production URL
+      // Direct API call to our backend - no proxy
       const apiUrl = `https://web-scrape-support-bot.lovable.app/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
@@ -264,23 +265,30 @@
       fetch(apiUrl, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors',
-        credentials: 'omit'
+        mode: 'cors'
       })
         .then(response => {
-          console.log('API response received:', response);
+          console.log('API response status:', response.status);
+          console.log('API response headers:', [...response.headers.entries()]);
+          
           if (!response.ok) {
             throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
           }
-          // First check if response is JSON before trying to parse it
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            throw new Error(`Expected JSON response but got content-type: ${contentType}`);
-          }
-          return response.json();
+          
+          // Return the text content first to see what we're getting
+          return response.text().then(text => {
+            console.log('Raw API response text:', text);
+            
+            // Try to parse as JSON, but handle if it's not valid JSON
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              console.error('Failed to parse response as JSON:', e);
+              throw new Error('Received non-JSON response from server');
+            }
+          });
         })
         .then(data => {
           console.log('API response data:', data);
