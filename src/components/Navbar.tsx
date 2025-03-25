@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -76,6 +77,9 @@ export const Navbar = () => {
           </nav>
           
           <div className="flex items-center space-x-4">
+            {/* Theme toggle button */}
+            <ThemeToggle />
+            
             {user ? (
               <Link to="/dashboard">
                 <Button variant="outline" size="sm" className="hidden sm:inline-flex">
