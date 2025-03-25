@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,8 +23,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import ConversationList from "@/components/ConversationList";
 import ChatInterface from "@/components/ChatInterface";
-import CustomerDetails from "@/components/CustomerDetails";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Conversation {
   id: string;
@@ -84,12 +83,10 @@ const Conversations = () => {
     
     fetchBotDetails();
     
-    // Set up a channel to listen for new messages
     const channel = supabase
       .channel('conversation_updates')
       .on('broadcast', { event: 'new_message' }, (payload) => {
         if (payload.payload.botId === botId) {
-          // Play notification sound for new messages
           playNotificationSound();
           toast.info("New message received", {
             description: `From: ${payload.payload.customerName}`
@@ -107,8 +104,6 @@ const Conversations = () => {
     if (!selectedConversation) return;
     
     try {
-      // Update conversation status to 'human' in the database
-      // In a real app, this would be an actual database update
       setSelectedConversation({
         ...selectedConversation,
         status: 'human'
@@ -125,8 +120,6 @@ const Conversations = () => {
     if (!selectedConversation) return;
     
     try {
-      // Update conversation status to 'closed' in the database
-      // In a real app, this would be an actual database update
       setSelectedConversation({
         ...selectedConversation,
         status: 'closed'
@@ -158,6 +151,7 @@ const Conversations = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
               <User className="h-4 w-4 mr-2" />
               Profile
@@ -167,8 +161,7 @@ const Conversations = () => {
       </header>
 
       <div className="container mx-auto p-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-8rem)]">
-          {/* Left sidebar */}
+        <div className="grid grid-cols-1 md:grid-cols-10 gap-4 h-[calc(100vh-8rem)]">
           <div className="col-span-1 md:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
               <div className="relative">
@@ -236,8 +229,7 @@ const Conversations = () => {
             </Tabs>
           </div>
           
-          {/* Middle - Chat area */}
-          <div className="col-span-1 md:col-span-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
+          <div className="col-span-1 md:col-span-7 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
             {selectedConversation ? (
               <ChatInterface 
                 conversation={selectedConversation}
@@ -254,25 +246,6 @@ const Conversations = () => {
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
                     Select a conversation from the list to view messages
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Right sidebar - Customer details */}
-          <div className="col-span-1 md:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-full">
-            {selectedConversation ? (
-              <CustomerDetails conversation={selectedConversation} />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center p-6">
-                  <User className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                    No customer selected
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Select a conversation to view customer details
                   </p>
                 </div>
               </div>
