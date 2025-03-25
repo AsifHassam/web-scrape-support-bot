@@ -1,17 +1,17 @@
 
-export function generateEmbedCode(botId: string): string {
-  const scriptUrl = `${window.location.origin}/widget-script.js?botId=${botId}`;
+/**
+ * Generates an HTML script tag to embed the chatbot widget
+ * @param botId The unique identifier for the bot to be embedded
+ * @returns A string containing the HTML script tag
+ */
+export const generateEmbedCode = (botId: string): string => {
+  // Get the origin from the environment if available, or use a default
+  const deployedOrigin = window.location.origin;
   
-  return `<!-- Support Bot Widget -->
-<script>
-  (function(w, d, s, o) {
-    var js, fjs = d.getElementsByTagName(s)[0];
-    w.__supportBot = o || {};
-    js = d.createElement(s);
-    js.id = 'support-bot-widget-script';
-    js.src = "${scriptUrl}";
-    js.async = 1;
-    fjs.parentNode.insertBefore(js, fjs);
-  }(window, document, 'script', { botId: "${botId}" }));
-</script>`;
-}
+  // The script tag with the bot ID as a data attribute
+  return `<script 
+  src="${deployedOrigin}/widget-script.js" 
+  data-bot-id="${botId}" 
+  defer
+></script>`;
+};

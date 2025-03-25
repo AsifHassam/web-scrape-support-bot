@@ -124,9 +124,56 @@ const EditBot = () => {
     
     try {
       toast.info("Starting scrape process...");
-      await startScraping(websiteUrl);
+      const progress = await startScraping(websiteUrl);
+      
+      // If scrape was successful, add or update the knowledge source
+      if (progress && progress.status === 'complete' && id) {
+        // Check if this URL already exists as a source
+        const existingSource = knowledgeSources.find(
+          source => source.source_type === 'website' && source.content === websiteUrl
+        );
+        
+        if (existingSource) {
+          // Update timestamp of existing source
+          const { error } = await supabase
+            .from("knowledge_sources")
+            .update({ created_at: new Date().toISOString() })
+            .eq("id", existingSource.id);
+            
+          if (error) throw error;
+        } else {
+          // Add new knowledge source
+          const { error } = await supabase
+            .from("knowledge_sources")
+            .insert({
+              bot_id: id,
+              source_type: 'website',
+              content: websiteUrl
+            });
+            
+          if (error) throw error;
+        }
+        
+        // Refresh knowledge sources
+        const { data, error } = await supabase
+          .from("knowledge_sources")
+          .select("*")
+          .eq("bot_id", id);
+          
+        if (error) throw error;
+        setKnowledgeSources(data || []);
+        
+        toast.success("Knowledge base updated successfully");
+      }
     } catch (error: any) {
       toast.error("Error scraping website: " + error.message);
+    }
+  };
+
+  const handleAddMoreKnowledge = () => {
+    // Navigate to create-bot with the current bot ID to add more knowledge
+    if (id) {
+      navigate(`/create-bot?edit=${id}`);
     }
   };
 
@@ -260,7 +307,7 @@ const EditBot = () => {
             )}
             
             <div className="mt-6">
-              <Button onClick={() => navigate(`/create-bot`)}>
+              <Button onClick={handleAddMoreKnowledge}>
                 Add More Knowledge
               </Button>
             </div>
