@@ -39,7 +39,9 @@ const EditBot = () => {
         if (error) throw error;
         setBot(data);
         setBotName(data.name || "AI Assistant");
-        setCompanyName(data.company_name || "Your Company");
+        setCompanyName(data.company || "Your Company");
+        
+        // The primary_color might not exist yet in the database schema, so we'll use the default if it's not there
         setBotColor(data.primary_color || "#3b82f6");
       } catch (error: any) {
         console.error("Error fetching bot:", error);
@@ -138,7 +140,7 @@ const EditBot = () => {
         .from("bots")
         .update({
           name: values.botName,
-          company_name: values.companyName,
+          company: values.companyName,    // Changed from company_name to company to match schema
           primary_color: values.primaryColor,
         })
         .eq("id", id);
