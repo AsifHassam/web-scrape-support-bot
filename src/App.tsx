@@ -15,6 +15,7 @@ import CreateBot from "./pages/CreateBot";
 import EditBot from "./pages/EditBot";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
 
 // Create a client instance outside of the component
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/scraped-site" element={<ScrapedSite />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/contact" element={<Contact />} />
               
               {/* Protected routes (require authentication) */}
               <Route path="/dashboard" element={

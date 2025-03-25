@@ -64,7 +64,9 @@ const Pricing = () => {
                 </ul>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button className="w-full">Get Started</Button>
+                <Link to="/auth?signup=true" className="w-full">
+                  <Button className="w-full">Get Started</Button>
+                </Link>
               </CardFooter>
             </Card>
             
@@ -114,7 +116,9 @@ const Pricing = () => {
                 </ul>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button className="w-full" variant="default">Get Started</Button>
+                <Link to="/auth?signup=true" className="w-full">
+                  <Button className="w-full" variant="default">Get Started</Button>
+                </Link>
               </CardFooter>
             </Card>
             
@@ -164,7 +168,9 @@ const Pricing = () => {
                 </ul>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button className="w-full" variant="outline">Contact Sales</Button>
+                <Link to="/contact" className="w-full">
+                  <Button className="w-full" variant="outline">Contact Sales</Button>
+                </Link>
               </CardFooter>
             </Card>
           </div>
@@ -213,9 +219,9 @@ const Pricing = () => {
               <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
                 Terms of Service
               </a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+              <Link to="/contact" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
           
