@@ -18,9 +18,9 @@ import NotFound from "@/pages/NotFound";
 
 const App = () => {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <AuthProvider>
-        <Router>
+    <Router>
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -75,10 +75,10 @@ const App = () => {
             
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Router>
-        <SonnerToaster position="top-right" richColors />
-      </AuthProvider>
-    </ThemeProvider>
+          <SonnerToaster position="top-right" richColors />
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 };
 
