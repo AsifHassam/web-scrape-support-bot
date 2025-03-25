@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -294,7 +295,19 @@
       })
         .then(response => {
           console.log('API response received:', response);
-          return response.json();
+          if (!response.ok) {
+            throw new Error(`API responded with status ${response.status}`);
+          }
+          return response.text(); // Use text() instead of json() to safely check response format
+        })
+        .then(text => {
+          // Try to parse as JSON, but handle non-JSON responses
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('Failed to parse response as JSON:', text);
+            throw new Error('Invalid response format from server');
+          }
         })
         .catch((error) => {
           // Fallback response if API call fails
