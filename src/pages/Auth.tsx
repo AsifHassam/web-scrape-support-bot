@@ -1,94 +1,270 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import BotTypeSelector from "@/components/BotTypeSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+
+type BotType = 
+  | 'educational' 
+  | 'health' 
+  | 'customer_support' 
+  | 'it_support' 
+  | 'ecommerce' 
+  | 'hr' 
+  | 'personal' 
+  | 'lead_generation' 
+  | 'other';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [botType, setBotType] = useState<BotType | ''>('');
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!email) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    
+    if (!password) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+    
+    if (!isLogin && step === 2 && !botType) {
+      newErrors.botType = "Please select a bot type";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setLoading(true);
 
     try {
       if (isLogin) {
         const { error } = await signIn(email, password);
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("Email not confirmed")) {
+            toast.error("Please confirm your email before logging in");
+          } else if (error.message.includes("Invalid login credentials")) {
+            toast.error("Invalid email or password");
+          } else {
+            toast.error(error.message);
+          }
+          throw error;
+        }
         toast.success("Successfully logged in!");
         navigate("/dashboard");
       } else {
-        const { error } = await signUp(email, password);
-        if (error) throw error;
-        toast.success("Registration successful! Please check your email for confirmation.");
+        if (step === 1) {
+          // Check if email already exists
+          const { data } = await supabase.auth.signInWithPassword({
+            email,
+            password: "dummypassword" // Using a dummy password to check if email exists
+          });
+          
+          if (data.user) {
+            setErrors({
+              email: "An account with this email already exists"
+            });
+            setLoading(false);
+            return;
+          } else {
+            // Move to step 2 if email doesn't exist
+            setStep(2);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Handle actual signup
+          const { error } = await signUp(email, password);
+          if (error) {
+            if (error.message.includes("User already registered")) {
+              toast.error("This email is already registered");
+            } else {
+              toast.error(error.message);
+            }
+            throw error;
+          }
+          
+          // Store bot type preference
+          if (botType) {
+            const { error: prefError } = await supabase
+              .from("user_preferences")
+              .insert({ user_id: supabase.auth.getUser().then(res => res.data.user?.id), bot_type: botType });
+              
+            if (prefError) {
+              console.error("Failed to save preference:", prefError);
+            }
+          }
+          
+          toast.success("Registration successful! Please check your email for confirmation.");
+        }
       }
     } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
+      // Error is already handled in the try block
+      console.error("Auth error:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBackToStep1 = () => {
+    setStep(1);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {isLogin ? "Log in to your account" : "Create a new account"}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {isLogin
-              ? "Enter your credentials to access your account"
-              : "Sign up to start creating your chatbots"}
-          </p>
+      <div className="absolute top-0 left-0 right-0">
+        <div className="container mx-auto px-4 py-4">
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-5 h-5 text-white"
+              >
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="17" x2="12" y2="17"></line>
+              </svg>
+            </span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-white">Chatwise</span>
+          </Link>
         </div>
+      </div>
+      
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 space-y-6 mt-20">
+        {isLogin || step === 1 ? (
+          <>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {isLogin ? "Log in to your account" : "Create a new account"}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {isLogin
+                  ? "Enter your credentials to access your account"
+                  : "Sign up to start creating your chatbots"}
+              </p>
+            </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={errors.email ? "border-red-500" : ""}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={errors.password ? "border-red-500" : ""}
+                />
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading
+                  ? "Processing..."
+                  : isLogin
+                  ? "Sign In"
+                  : "Continue"}
+              </Button>
+            </form>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center mb-4">
+              <Button variant="ghost" onClick={handleBackToStep1} className="p-0 mr-2">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tell us about your needs</h1>
+            </div>
+            
+            <BotTypeSelector 
+              value={botType} 
+              onChange={(value) => {
+                setBotType(value);
+                if (errors.botType) {
+                  setErrors({ ...errors, botType: '' });
+                }
+              }} 
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading
-              ? "Processing..."
-              : isLogin
-              ? "Sign In"
-              : "Create Account"}
-          </Button>
-        </form>
+            
+            {errors.botType && (
+              <p className="text-sm text-red-500">{errors.botType}</p>
+            )}
+            
+            <Button 
+              onClick={handleAuth} 
+              className="w-full mt-6" 
+              disabled={loading}
+            >
+              {loading ? "Creating Account..." : "Create Account"}
+            </Button>
+          </>
+        )}
 
         <div className="text-center pt-2">
           <button
             type="button"
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setStep(1);
+              setErrors({});
+            }}
             className="text-sm text-primary hover:underline"
           >
             {isLogin

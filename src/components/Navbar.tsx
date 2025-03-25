@@ -1,11 +1,15 @@
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollProgress = useScrollProgress();
+  const { user } = useAuth();
   
   useEffect(() => {
     setIsScrolled(scrollProgress > 0.01);
@@ -19,7 +23,7 @@ export const Navbar = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center">
-            <a href="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <span className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -36,8 +40,8 @@ export const Navbar = () => {
                   <line x1="12" y1="17" x2="12" y2="17"></line>
                 </svg>
               </span>
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">WebKnow</span>
-            </a>
+              <span className="text-xl font-semibold text-gray-900 dark:text-white">Chatwise</span>
+            </Link>
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
@@ -53,12 +57,29 @@ export const Navbar = () => {
           </nav>
           
           <div className="flex items-center space-x-4">
-            <a 
-              href="#get-started" 
+            {user ? (
+              <Link to="/dashboard">
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button 
+                  variant="outline"
+                  size="sm" 
+                  className="hidden sm:inline-flex items-center"
+                >
+                  Login
+                </Button>
+              </Link>
+            )}
+            <Link
+              to="/auth" 
               className="hidden sm:inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 transition-colors duration-200"
             >
               Get Started
-            </a>
+            </Link>
           </div>
         </div>
       </div>

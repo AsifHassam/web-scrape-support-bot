@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { chatbotService } from './utils/chatbot';
+import { supabase } from '@/integrations/supabase/client';
 
 // Make sure the root element exists before trying to render
 const rootElement = document.getElementById("root");
@@ -14,6 +15,9 @@ if (rootElement) {
 
 // Handle API requests if running in a browser environment
 if (typeof window !== 'undefined') {
+  // Store visitor sessions to track unique visitors
+  const visitorSessions = new Map<string, boolean>();
+  
   // Create a handler for the /api/chat route
   const originalFetch = window.fetch;
   window.fetch = async function(input, init) {
@@ -26,6 +30,18 @@ if (typeof window !== 'undefined') {
       const urlObj = new URL(url);
       const botId = urlObj.searchParams.get('botId');
       const message = urlObj.searchParams.get('message');
+      const sessionId = urlObj.searchParams.get('sessionId') || 
+                        localStorage.getItem('chatSessionId') || 
+                        Math.random().toString(36).substring(2, 15);
+      
+      // Store the session ID for future reference
+      localStorage.setItem('chatSessionId', sessionId);
+      
+      // Determine if this is a new visitor
+      const isNewVisitor = !visitorSessions.has(sessionId);
+      if (isNewVisitor) {
+        visitorSessions.set(sessionId, true);
+      }
       
       if (!botId || !message) {
         console.error('Missing parameters in API call:', { botId, message });
@@ -43,7 +59,31 @@ if (typeof window !== 'undefined') {
       }
       
       try {
-        // Use the chatbot service
+        // Update analytics
+        try {
+          const analyticsResponse = await fetch(
+            'https://mgtycpcnobkbfolkhobk.supabase.co/functions/v1/update-analytics',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                botId,
+                sessionId,
+                isNewVisitor
+              })
+            }
+          );
+          
+          if (!analyticsResponse.ok) {
+            console.error('Failed to update analytics:', await analyticsResponse.text());
+          }
+        } catch (analyticsError) {
+          console.error('Error updating analytics:', analyticsError);
+        }
+        
+        // Use the chatbot service for message processing
         console.log('Processing message with chatbot service:', message);
         const response = await chatbotService.sendMessage(message);
         console.log('Chatbot service response:', response);

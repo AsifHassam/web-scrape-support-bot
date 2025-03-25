@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -5,21 +6,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, FileUp, Globe, ClipboardCopy, Check, Copy } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, ArrowRight, FileUp, Globe, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useScrapeWebsite } from "@/hooks/useScrapeWebsite";
 import ChatbotEmulator from "@/components/ChatbotEmulator";
 import { initialScrapeProgress } from "@/utils/scraper";
-import { chatbotService } from "@/utils/chatbot";
-import { generateEmbedCode } from '@/utils/generateEmbedCode';
+import { normalizeUrl, isValidUrl } from '@/utils/urlUtils';
+import BotTypeSelector from '@/components/BotTypeSelector';
+
+type BotType = 
+  | 'educational' 
+  | 'health' 
+  | 'customer_support' 
+  | 'it_support' 
+  | 'ecommerce' 
+  | 'hr' 
+  | 'personal' 
+  | 'lead_generation' 
+  | 'other';
 
 interface BotFormData {
   name: string;
   company: string;
-  knowledgeType: "website" | "pdf";
-  websiteUrl: string;
-  pdfFiles: File[];
+  botType: BotType | '';
+  knowledgeSources: {
+    useWebsite: boolean;
+    websiteUrl: string;
+    usePdfs: boolean;
+    pdfFiles: File[];
+  };
 }
 
 const CreateBot = () => {
@@ -27,23 +43,33 @@ const CreateBot = () => {
   const [formData, setFormData] = useState<BotFormData>({
     name: "",
     company: "",
-    knowledgeType: "website",
-    websiteUrl: "",
-    pdfFiles: [],
+    botType: "",
+    knowledgeSources: {
+      useWebsite: true,
+      websiteUrl: "",
+      usePdfs: false,
+      pdfFiles: [],
+    },
   });
   const [embedCode, setEmbedCode] = useState("");
   const [botId, setBotId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [urlScraped, setUrlScraped] = useState(false);
   const { scrapeProgress, startScraping } = useScrapeWebsite();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (botId) {
-      const code = `<script>
+      const code = generateEmbedCode(botId);
+      setEmbedCode(code);
+    }
+  }, [botId]);
+
+  const generateEmbedCode = (botId: string) => {
+    return `<script>
   (function(w, d, s, o, f, js, fjs) {
-    w['MyBotWidget'] = o;
+    w['ChatwiseWidget'] = o;
     w[o] = w[o] || function() {
       (w[o].q = w[o].q || []).push(arguments)
     };
@@ -52,22 +78,29 @@ const CreateBot = () => {
     js.src = f;
     js.async = 1;
     fjs.parentNode.insertBefore(js, fjs);
-  }(window, document, 'script', 'mw', 'https://chatbot-widget.example.com/widget.js'));
-  mw('init', { botId: '${botId}' });
+  }(window, document, 'script', 'cw', 'https://web-scrape-support-bot.lovable.app/widget.js'));
+  cw('init', { botId: '${botId}' });
 </script>`;
-      setEmbedCode(code);
-    }
-  }, [botId]);
+  };
 
   const handleScrapeWebsite = async () => {
-    if (!formData.websiteUrl) {
+    if (!formData.knowledgeSources.websiteUrl) {
       toast.error("Please enter a website URL");
+      return;
+    }
+
+    const normalizedUrl = normalizeUrl(formData.knowledgeSources.websiteUrl);
+    
+    if (!isValidUrl(normalizedUrl)) {
+      toast.error("Please enter a valid website URL");
       return;
     }
 
     setLoading(true);
     try {
-      await startScraping(formData.websiteUrl);
+      await startScraping(normalizedUrl);
+      setUrlScraped(true);
+      toast.success("Website scraped successfully!");
     } catch (error: any) {
       toast.error("Failed to scrape website: " + error.message);
     } finally {
@@ -79,28 +112,67 @@ const CreateBot = () => {
     if (e.target.files) {
       setFormData({
         ...formData,
-        pdfFiles: Array.from(e.target.files),
+        knowledgeSources: {
+          ...formData.knowledgeSources,
+          pdfFiles: [...formData.knowledgeSources.pdfFiles, ...Array.from(e.target.files)],
+        }
       });
     }
   };
 
-  const handleNext = async () => {
-    if (step === 1) {
-      if (formData.knowledgeType === "website" && !formData.websiteUrl) {
-        toast.error("Please enter a website URL");
-        return;
+  const handleRemoveFile = (index: number) => {
+    const updatedFiles = [...formData.knowledgeSources.pdfFiles];
+    updatedFiles.splice(index, 1);
+    setFormData({
+      ...formData,
+      knowledgeSources: {
+        ...formData.knowledgeSources,
+        pdfFiles: updatedFiles
       }
-      if (formData.knowledgeType === "pdf" && formData.pdfFiles.length === 0) {
-        toast.error("Please upload at least one PDF file");
-        return;
+    });
+  };
+
+  const validateStep = () => {
+    if (step === 1) {
+      // Validate knowledge sources
+      if (formData.knowledgeSources.useWebsite && !formData.knowledgeSources.websiteUrl) {
+        toast.error("Please enter a website URL or uncheck the website option");
+        return false;
+      }
+      
+      if (formData.knowledgeSources.useWebsite && !urlScraped) {
+        toast.error("Please scrape the website first");
+        return false;
+      }
+      
+      if (formData.knowledgeSources.usePdfs && formData.knowledgeSources.pdfFiles.length === 0) {
+        toast.error("Please upload at least one PDF file or uncheck the PDF option");
+        return false;
+      }
+      
+      if (!formData.knowledgeSources.useWebsite && !formData.knowledgeSources.usePdfs) {
+        toast.error("Please select at least one knowledge source");
+        return false;
       }
     } else if (step === 2) {
+      // Validate bot details
       if (!formData.name) {
         toast.error("Please enter a bot name");
-        return;
+        return false;
+      }
+      
+      if (!formData.botType) {
+        toast.error("Please select a bot type");
+        return false;
       }
     }
+    
+    return true;
+  };
 
+  const handleNext = async () => {
+    if (!validateStep()) return;
+    
     if (step === 3) {
       setLoading(true);
       try {
@@ -109,6 +181,7 @@ const CreateBot = () => {
           .insert({
             name: formData.name,
             company: formData.company,
+            bot_type: formData.botType,
             user_id: user?.id,
           })
           .select()
@@ -119,18 +192,32 @@ const CreateBot = () => {
         const newBotId = botData.id;
         setBotId(newBotId);
 
-        const sourceType = formData.knowledgeType === "website" ? "website" : "document";
-        const content = formData.knowledgeType === "website" ? formData.websiteUrl : "PDF files uploaded";
+        // Add knowledge sources
+        const knowledgeSourcesToAdd = [];
         
-        const { error: sourceError } = await supabase
-          .from("knowledge_sources")
-          .insert({
+        if (formData.knowledgeSources.useWebsite) {
+          knowledgeSourcesToAdd.push({
             bot_id: newBotId,
-            source_type: sourceType,
-            content: content,
+            source_type: "website",
+            content: formData.knowledgeSources.websiteUrl,
           });
+        }
+        
+        if (formData.knowledgeSources.usePdfs) {
+          knowledgeSourcesToAdd.push({
+            bot_id: newBotId,
+            source_type: "document",
+            content: "PDF files uploaded",
+          });
+        }
+        
+        if (knowledgeSourcesToAdd.length > 0) {
+          const { error: sourceError } = await supabase
+            .from("knowledge_sources")
+            .insert(knowledgeSourcesToAdd);
 
-        if (sourceError) throw sourceError;
+          if (sourceError) throw sourceError;
+        }
 
         toast.success("Chatbot created successfully!");
         setStep(4);
@@ -150,54 +237,42 @@ const CreateBot = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(embedCode);
-    setCopied(true);
     toast.success("Code copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const renderEmbedCode = () => {
-    const embedCode = generateEmbedCode(botId || 'demo-bot');
-    
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Embed Code</h3>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(embedCode);
-              toast.success("The embed code has been copied to your clipboard");
-            }}
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            Copy
-          </Button>
-        </div>
-        
-        <div className="relative">
-          <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
-            {embedCode}
-          </pre>
-        </div>
-        
-        <div className="text-sm text-muted-foreground">
-          <p>Add this code to your website to embed the chatbot widget.</p>
-        </div>
-      </div>
-    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <div className="w-full lg:w-7/12 p-8">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-        </Button>
+        <div className="flex items-center space-x-4 mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+          </Button>
+
+          <div className="h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
+
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-5 h-5 text-white"
+              >
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="17" x2="12" y2="17"></line>
+              </svg>
+            </span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-white">Chatwise</span>
+          </Link>
+        </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           {step === 4 ? "Your Bot is Ready!" : "Create New Chatbot"}
@@ -219,119 +294,166 @@ const CreateBot = () => {
               Choose how you want to feed your chatbot with information
             </p>
 
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  variant={formData.knowledgeType === "website" ? "default" : "outline"}
-                  onClick={() => setFormData({ ...formData, knowledgeType: "website" })}
-                  className="flex-1 flex items-center justify-center"
-                >
-                  <Globe className="mr-2 h-5 w-5" />
-                  Website URL
-                </Button>
-                <Button
-                  variant={formData.knowledgeType === "pdf" ? "default" : "outline"}
-                  onClick={() => setFormData({ ...formData, knowledgeType: "pdf" })}
-                  className="flex-1 flex items-center justify-center"
-                >
-                  <FileUp className="mr-2 h-5 w-5" />
-                  Upload PDFs
-                </Button>
-              </div>
-
-              {formData.knowledgeType === "website" ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="websiteUrl">Website URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="websiteUrl"
-                        placeholder="https://example.com"
-                        value={formData.websiteUrl}
-                        onChange={(e) =>
-                          setFormData({ ...formData, websiteUrl: e.target.value })
-                        }
-                      />
-                      <Button 
-                        onClick={handleScrapeWebsite} 
-                        disabled={loading || !formData.websiteUrl}
-                      >
-                        {loading ? "Scraping..." : "Scrape"}
-                      </Button>
-                    </div>
-                  </div>
+            <div className="space-y-6">
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="useWebsite" 
+                  checked={formData.knowledgeSources.useWebsite}
+                  onCheckedChange={(checked) => 
+                    setFormData({
+                      ...formData,
+                      knowledgeSources: {
+                        ...formData.knowledgeSources,
+                        useWebsite: checked as boolean
+                      }
+                    })
+                  }
+                />
+                <div className="space-y-4 flex-1">
+                  <Label 
+                    htmlFor="useWebsite" 
+                    className="font-medium flex items-center cursor-pointer"
+                  >
+                    <Globe className="mr-2 h-5 w-5 text-primary" />
+                    Website URL
+                  </Label>
                   
-                  {scrapeProgress.status !== 'idle' && (
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <h3 className="font-medium mb-2">Scraping Status</h3>
+                  {formData.knowledgeSources.useWebsite && (
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                          <div
-                            className="bg-primary h-2 rounded-full"
-                            style={{ width: `${scrapeProgress.progress * 100}%` }}
-                          ></div>
+                        <div className="flex gap-2">
+                          <Input
+                            id="websiteUrl"
+                            placeholder="example.com"
+                            value={formData.knowledgeSources.websiteUrl}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                knowledgeSources: {
+                                  ...formData.knowledgeSources,
+                                  websiteUrl: e.target.value
+                                }
+                              })
+                            }
+                          />
+                          <Button 
+                            onClick={handleScrapeWebsite} 
+                            disabled={loading || !formData.knowledgeSources.websiteUrl}
+                          >
+                            {loading ? "Scraping..." : "Scrape"}
+                          </Button>
                         </div>
-                        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                          <span>
-                            {scrapeProgress.processedUrls} / {scrapeProgress.totalUrls || "?"} URLs
-                          </span>
-                          <span>
-                            {scrapeProgress.status === "complete"
-                              ? "Complete"
-                              : scrapeProgress.status === "error"
-                              ? "Error"
-                              : "In progress"}
-                          </span>
-                        </div>
-                        {scrapeProgress.status === "error" && (
-                          <p className="text-red-500 text-sm">{scrapeProgress.error}</p>
-                        )}
                       </div>
+                      
+                      {scrapeProgress.status !== 'idle' && (
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h3 className="font-medium mb-2">Scraping Status</h3>
+                          <div className="space-y-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{ width: `${scrapeProgress.progress * 100}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                              <span>
+                                {scrapeProgress.processedUrls} / {scrapeProgress.totalUrls || "?"} URLs
+                              </span>
+                              <span>
+                                {scrapeProgress.status === "complete"
+                                  ? "Complete"
+                                  : scrapeProgress.status === "error"
+                                  ? "Error"
+                                  : "In progress"}
+                              </span>
+                            </div>
+                            {scrapeProgress.status === "error" && (
+                              <p className="text-red-500 text-sm">{scrapeProgress.error}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="pdfUpload">Upload PDF files</Label>
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
-                    <input
-                      id="pdfUpload"
-                      type="file"
-                      accept=".pdf"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <label
-                      htmlFor="pdfUpload"
-                      className="flex flex-col items-center cursor-pointer"
-                    >
-                      <FileUp className="h-10 w-10 text-gray-400 mb-2" />
-                      <span className="text-gray-600 dark:text-gray-400 mb-1">
-                        Drag & drop files or click to browse
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-500">
-                        Supports PDF files
-                      </span>
-                    </label>
-                  </div>
-                  {formData.pdfFiles.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium mb-2">Selected files:</p>
-                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        {formData.pdfFiles.map((file, index) => (
-                          <li key={index} className="flex items-center">
-                            <span className="truncate">{file.name}</span>
-                            <span className="ml-2 text-xs text-gray-500">
-                              ({(file.size / 1024).toFixed(0)} KB)
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="usePdfs" 
+                  checked={formData.knowledgeSources.usePdfs}
+                  onCheckedChange={(checked) => 
+                    setFormData({
+                      ...formData,
+                      knowledgeSources: {
+                        ...formData.knowledgeSources,
+                        usePdfs: checked as boolean
+                      }
+                    })
+                  }
+                />
+                <div className="space-y-4 flex-1">
+                  <Label 
+                    htmlFor="usePdfs" 
+                    className="font-medium flex items-center cursor-pointer"
+                  >
+                    <FileUp className="mr-2 h-5 w-5 text-primary" />
+                    Upload PDF Files
+                  </Label>
+                  
+                  {formData.knowledgeSources.usePdfs && (
+                    <div className="space-y-2">
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
+                        <input
+                          id="pdfUpload"
+                          type="file"
+                          accept=".pdf"
+                          multiple
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                        <label
+                          htmlFor="pdfUpload"
+                          className="flex flex-col items-center cursor-pointer"
+                        >
+                          <FileUp className="h-10 w-10 text-gray-400 mb-2" />
+                          <span className="text-gray-600 dark:text-gray-400 mb-1">
+                            Drag & drop files or click to browse
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-500">
+                            Supports PDF files
+                          </span>
+                        </label>
+                      </div>
+                      {formData.knowledgeSources.pdfFiles.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium mb-2">Selected files:</p>
+                          <ul className="space-y-2">
+                            {formData.knowledgeSources.pdfFiles.map((file, index) => (
+                              <li key={index} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                                <div className="flex-1 truncate">
+                                  <span className="text-sm">{file.name}</span>
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    ({(file.size / 1024).toFixed(0)} KB)
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-500 hover:text-red-500"
+                                  onClick={() => handleRemoveFile(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}
@@ -366,6 +488,11 @@ const CreateBot = () => {
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 />
               </div>
+              
+              <BotTypeSelector 
+                value={formData.botType}
+                onChange={(value) => setFormData({ ...formData, botType: value })}
+              />
             </div>
           </div>
         )}
@@ -398,13 +525,29 @@ const CreateBot = () => {
               
               <div>
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Knowledge Base
+                  Bot Type
                 </h3>
                 <p className="mt-1 text-gray-900 dark:text-white">
-                  {formData.knowledgeType === "website"
-                    ? `Website: ${formData.websiteUrl}`
-                    : `${formData.pdfFiles.length} PDF files`}
+                  {formData.botType ? formData.botType.replace('_', ' ').charAt(0).toUpperCase() + formData.botType.replace('_', ' ').slice(1) : "Not specified"}
                 </p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Knowledge Base
+                </h3>
+                <div className="mt-1 space-y-1">
+                  {formData.knowledgeSources.useWebsite && (
+                    <p className="text-gray-900 dark:text-white">
+                      Website: {formData.knowledgeSources.websiteUrl}
+                    </p>
+                  )}
+                  {formData.knowledgeSources.usePdfs && (
+                    <p className="text-gray-900 dark:text-white">
+                      {formData.knowledgeSources.pdfFiles.length} PDF files
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -420,7 +563,29 @@ const CreateBot = () => {
             </p>
 
             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 relative">
-              {renderEmbedCode()}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Embed Code</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={copyToClipboard}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+                
+                <div className="relative">
+                  <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
+                    {embedCode}
+                  </pre>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  <p>Add this code to your website to embed the chatbot widget.</p>
+                </div>
+              </div>
             </div>
 
             <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">

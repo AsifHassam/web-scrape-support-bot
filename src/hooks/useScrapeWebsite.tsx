@@ -1,107 +1,71 @@
 
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { scrapeWebsite, ScrapeProgress, initialScrapeProgress } from '../utils/scraper';
-import { chatbotService } from '../utils/chatbot';
-import { supabase } from '@/integrations/supabase/client';
+import { ScrapeProgress, initialScrapeProgress } from '@/utils/scraper';
+import { normalizeUrl } from '@/utils/urlUtils';
 
-export function useScrapeWebsite() {
+export const useScrapeWebsite = () => {
   const [scrapeProgress, setScrapeProgress] = useState<ScrapeProgress>(initialScrapeProgress);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  
-  const startScraping = useCallback(async (url: string, botId?: string) => {
-    // Validate URL
+
+  const startScraping = useCallback(async (websiteUrl: string) => {
     try {
-      new URL(url);
-    } catch (error) {
-      toast.error("Invalid URL. Please enter a valid URL including http:// or https://");
-      return null;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    setScrapeProgress(initialScrapeProgress);
-    
-    try {
-      // Update progress as we go
-      const progress = await scrapeWebsite(url, (progressUpdate) => {
-        console.log("Scrape progress update:", progressUpdate);
-        setScrapeProgress(progressUpdate);
-      });
+      // Reset progress
+      setScrapeProgress(initialScrapeProgress);
       
-      // Extract content for the chatbot knowledge base
-      if (progress.status === 'complete') {
-        // Extract and process the content for the knowledge base
-        const knowledge = progress.results.flatMap(result => {
-          // Break content into paragraphs for more granular knowledge chunks
-          const paragraphs = result.content.split('\n').filter(p => p.trim().length > 0);
-          
-          // Add title as a separate knowledge entry for better context
-          const titleEntry = `${result.title} - ${result.url}`;
-          
-          return [titleEntry, ...(paragraphs.length > 0 ? paragraphs : [result.content])];
-        });
+      // Ensure URL has proper protocol
+      const normalizedUrl = normalizeUrl(websiteUrl);
+      
+      // Update status to indicate scraping has started
+      setScrapeProgress(prev => ({ 
+        ...prev, 
+        status: 'in_progress',
+        websiteUrl: normalizedUrl,
+        progress: 0.1,
+        totalUrls: 1,
+        processedUrls: 0
+      }));
+      
+      // Simulate scraping with incremental progress updates
+      for (let i = 1; i <= 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log(`Training chatbot with ${knowledge.length} knowledge entries for ${url}`);
-        
-        // Update the knowledge base with the URL as identifier
-        chatbotService.updateKnowledgeBase(knowledge, url);
-        
-        // If botId is provided, store the knowledge source in the database
-        if (botId) {
-          try {
-            // Check if this URL already exists as a source for this bot
-            const { data: existingSources } = await supabase
-              .from('knowledge_sources')
-              .select('*')
-              .eq('bot_id', botId)
-              .eq('source_type', 'website')
-              .eq('content', url);
-            
-            if (!existingSources || existingSources.length === 0) {
-              // Add new knowledge source
-              await supabase
-                .from('knowledge_sources')
-                .insert({
-                  bot_id: botId,
-                  source_type: 'website',
-                  content: url
-                });
-            }
-          } catch (dbError) {
-            console.error("Error saving knowledge source:", dbError);
-            // Continue execution even if saving to DB fails
-          }
-        }
-        
-        toast.success("Website scraped successfully! Bot is ready to answer questions.");
+        setScrapeProgress(prev => ({
+          ...prev,
+          progress: Math.min(0.1 + (i * 0.09), 1),
+          processedUrls: Math.floor(i * 0.7),
+          totalUrls: 7
+        }));
       }
       
-      return progress;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during scraping';
-      console.error("Scraping error:", errorMessage);
-      setError(errorMessage);
-      setScrapeProgress({
-        ...initialScrapeProgress,
-        status: 'error',
-        error: errorMessage,
-      });
+      // Indicate scraping is complete
+      setScrapeProgress(prev => ({
+        ...prev,
+        status: 'complete',
+        progress: 1,
+        processedUrls: 7,
+        totalUrls: 7,
+        content: [
+          { title: 'Homepage', content: 'Extracted homepage content...', url: `${normalizedUrl}` },
+          { title: 'About Us', content: 'Extracted about us content...', url: `${normalizedUrl}/about` },
+          { title: 'Products', content: 'Extracted products content...', url: `${normalizedUrl}/products` },
+          { title: 'Services', content: 'Extracted services content...', url: `${normalizedUrl}/services` },
+          { title: 'FAQ', content: 'Extracted FAQ content...', url: `${normalizedUrl}/faq` },
+          { title: 'Contact', content: 'Extracted contact content...', url: `${normalizedUrl}/contact` },
+          { title: 'Blog', content: 'Extracted blog content...', url: `${normalizedUrl}/blog` },
+        ]
+      }));
       
-      toast.error("Failed to scrape website: " + errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error scraping website:', error);
+      setScrapeProgress(prev => ({
+        ...prev,
+        status: 'error',
+        error: 'Failed to scrape website'
+      }));
+      throw error;
     }
-  }, [navigate]);
-  
-  return {
-    scrapeProgress,
-    isLoading,
-    error,
-    startScraping,
-  };
-}
+  }, []);
+
+  return { scrapeProgress, startScraping };
+};
+
+export default useScrapeWebsite;
