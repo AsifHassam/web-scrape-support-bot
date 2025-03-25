@@ -49,6 +49,7 @@ export type Database = {
       }
       bots: {
         Row: {
+          bot_type: string | null
           company: string | null
           created_at: string
           id: string
@@ -57,6 +58,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bot_type?: string | null
           company?: string | null
           created_at?: string
           id?: string
@@ -65,6 +67,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bot_type?: string | null
           company?: string | null
           created_at?: string
           id?: string

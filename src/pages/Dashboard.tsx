@@ -21,6 +21,7 @@ interface Bot {
   name: string;
   company: string;
   created_at: string;
+  bot_type?: string;
 }
 
 const Dashboard = () => {
@@ -85,6 +86,16 @@ const Dashboard = () => {
     }
   };
 
+  // Helper function to format bot type for display
+  const formatBotType = (type?: string) => {
+    if (!type) return "";
+    
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow">
@@ -139,9 +150,16 @@ const Dashboard = () => {
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
                   {bot.name}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  {bot.company}
-                </p>
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {bot.company}
+                  </p>
+                  {bot.bot_type && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-100">
+                      {formatBotType(bot.bot_type)}
+                    </span>
+                  )}
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
