@@ -248,6 +248,7 @@
     input.value = '';
     renderMessages();
     
+    // Determine API endpoint based on environment
     setTimeout(() => {
       // Determine the base URL based on the current environment
       let baseUrl;
@@ -255,15 +256,15 @@
       // Define allowed domains with their production URLs
       const productionUrl = 'https://web-scrape-support-bot.lovable.app';
       const allowedDomains = {
-        'localhost:8000': 'http://localhost:8000',
-        '127.0.0.1:5500': 'http://127.0.0.1:5500',
-        'localhost:8080': 'http://localhost:8080'
+        'localhost:8000': productionUrl,
+        '127.0.0.1:5500': productionUrl,
+        'localhost:8080': productionUrl
       };
       
       // Check current hostname and port
       const currentHost = window.location.host;
       
-      // If current host is in our allowed domains list, use it
+      // If current host is in our allowed domains list, use the production URL
       // Otherwise default to the production URL
       if (allowedDomains[currentHost]) {
         baseUrl = allowedDomains[currentHost];
@@ -281,7 +282,7 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the API call
+      // Make the real API call
       fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -293,19 +294,7 @@
       })
         .then(response => {
           console.log('API response received:', response);
-          if (!response.ok) {
-            throw new Error(`API responded with status ${response.status}`);
-          }
-          return response.text(); // Use text() instead of json() to safely check response format
-        })
-        .then(text => {
-          // Try to parse as JSON, but handle non-JSON responses
-          try {
-            return JSON.parse(text);
-          } catch (e) {
-            console.error('Failed to parse response as JSON:', text);
-            throw new Error('Invalid response format from server');
-          }
+          return response.json();
         })
         .catch((error) => {
           // Fallback response if API call fails
