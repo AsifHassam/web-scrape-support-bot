@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -232,6 +231,20 @@
     body.scrollTop = body.scrollHeight;
   }
 
+  // Determine the base URL based on the current environment
+  function getApiBaseUrl() {
+    // Check if we're running in a localhost development environment
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1';
+    
+    // Define the production URL
+    const productionUrl = 'https://web-scrape-support-bot.lovable.app';
+    
+    // If we're in a localhost development environment, use the current origin
+    // Otherwise, use the production URL
+    return isLocalhost ? window.location.origin : productionUrl;
+  }
+
   // Function to handle sending messages
   function handleSendMessage(e) {
     e.preventDefault();
@@ -250,28 +263,10 @@
     renderMessages();
     
     setTimeout(() => {
-      // Determine the base URL based on the current environment
-      let baseUrl;
+      // Get the base URL for API calls
+      const baseUrl = getApiBaseUrl();
       
-      // Define allowed domains with their production URLs
-      const productionUrl = 'https://web-scrape-support-bot.lovable.app';
-      const allowedDomains = {
-        'localhost:8000': window.location.origin,
-        '127.0.0.1:5500': window.location.origin,
-        'localhost:8080': window.location.origin
-      };
-      
-      // Check current hostname and port
-      const currentHost = window.location.host;
-      
-      // If current host is in our allowed domains list, use the production URL
-      // Otherwise default to the production URL
-      if (allowedDomains[currentHost]) {
-        baseUrl = allowedDomains[currentHost];
-      } else {
-        baseUrl = productionUrl;
-      }
-      
+      // Construct the API URL
       const apiUrl = `${baseUrl}/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
@@ -282,21 +277,22 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the real API call
+      // Make the API call
       fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Origin': window.location.origin
+          'Accept': 'application/json'
         },
-        mode: 'cors',
-        credentials: 'same-origin'
+        mode: 'cors'
       })
         .then(response => {
           console.log('API response received:', response);
           if (!response.ok) {
-            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+            return response.text().then(text => {
+              console.error('Error response text:', text);
+              throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+            });
           }
           return response.json();
         })
@@ -327,13 +323,6 @@
             content: "I'm having trouble connecting to my knowledge base right now. Please try again later."
           });
           renderMessages();
-          
-          // Try to get the raw response for debugging
-          if (error.response) {
-            error.response.text().then(text => {
-              console.error('Raw error response:', text);
-            }).catch(e => console.error('Could not get raw error text:', e));
-          }
         });
     }, 1000);
   }

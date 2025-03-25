@@ -28,12 +28,7 @@ export default defineConfig(({ mode }) => ({
         }
       }
     },
-    cors: {
-      origin: ['http://localhost:8000', 'http://127.0.0.1:5500', 'http://localhost:8080'],
-      methods: ['GET', 'POST', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
-      credentials: true
-    }
+    cors: true  // Enable CORS for all requests
   },
   plugins: [
     react(),
