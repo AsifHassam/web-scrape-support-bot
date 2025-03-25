@@ -10,7 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { Globe, FileText, Plus, Trash2, Upload, File } from "lucide-react";
+import { Globe, FileText, Plus, Trash2, Upload, File, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface KnowledgeSource {
   id: string;
@@ -30,6 +31,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   const [addingSource, setAddingSource] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   
   const form = useForm({
     defaultValues: {
@@ -67,6 +69,8 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   
   const handleAddSource = async (values: any) => {
     try {
+      setIsUploading(true);
+      
       if (values.sourceType === "file") {
         if (selectedFiles.length === 0) {
           toast({
@@ -74,6 +78,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
             description: "Please select at least one file to upload",
             variant: "destructive",
           });
+          setIsUploading(false);
           return;
         }
         
@@ -84,8 +89,17 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
           setUploadProgress(Math.round((i / selectedFiles.length) * 100));
           
           try {
-            // For text files, read as text
-            const fileContent = await readFileAsText(file);
+            // For text files, read as text; for binary files like PDFs, handle differently
+            let fileContent = "";
+            const fileExtension = file.name.split('.').pop()?.toLowerCase();
+            
+            if (file.type.includes('text') || 
+                ['txt', 'md', 'csv'].includes(fileExtension || '')) {
+              fileContent = await readFileAsText(file);
+            } else {
+              // For PDFs, docs, and other binary formats, store file metadata
+              fileContent = `File: ${file.name} (${file.type || `${fileExtension} file`}) - Size: ${(file.size / 1024).toFixed(1)} KB`;
+            }
             
             // Store file content in database
             const sourceData = {
@@ -155,6 +169,8 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
         description: "Failed to add knowledge source",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
   
@@ -337,14 +353,15 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                               id="files" 
                               type="file" 
                               multiple
-                              accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+                              accept=".txt,.md,.csv,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,text/plain,text/markdown,text/csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                               onChange={handleFileChange}
                               className="cursor-pointer file:cursor-pointer"
+                              disabled={isUploading}
                             />
                           </div>
                         </FormControl>
                         <FormDescription>
-                          Upload one or more text files (.txt, .md, .csv) to add to your bot's knowledge
+                          Upload files (.txt, .md, .csv, .pdf, .doc, .docx, .xls, .xlsx) to add to your bot's knowledge
                         </FormDescription>
                       </FormItem>
                       
@@ -360,11 +377,12 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                       )}
                       
                       {uploadProgress > 0 && (
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                          <div 
-                            className="bg-primary h-2.5 rounded-full" 
-                            style={{ width: `${uploadProgress}%` }}
-                          ></div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>Uploading files...</span>
+                            <span>{uploadProgress}%</span>
+                          </div>
+                          <Progress value={uploadProgress} className="h-2" />
                         </div>
                       )}
                     </TabsContent>
@@ -380,6 +398,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                               <Input 
                                 placeholder="https://example.com" 
                                 {...field} 
+                                disabled={isUploading}
                               />
                             </FormControl>
                             <FormDescription>
@@ -400,10 +419,20 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                         setSelectedFiles([]);
                         setUploadProgress(0);
                       }}
+                      disabled={isUploading}
                     >
                       Cancel
                     </Button>
-                    <Button type="submit">Add Source</Button>
+                    <Button type="submit" disabled={isUploading}>
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        "Add Source"
+                      )}
+                    </Button>
                   </div>
                 </form>
               </Form>
