@@ -6,6 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 
 interface Bot {
   id: string;
@@ -18,6 +27,8 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingBotId, setDeletingBotId] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,20 +59,29 @@ const Dashboard = () => {
     navigate(`/edit-bot/${id}`);
   };
 
-  const handleDeleteBot = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this bot?")) {
-      try {
-        const { error } = await supabase
-          .from("bots")
-          .delete()
-          .eq("id", id);
+  const openDeleteConfirmation = (id: string) => {
+    setDeletingBotId(id);
+    setConfirmDialogOpen(true);
+  };
 
-        if (error) throw error;
-        setBots(bots.filter((bot) => bot.id !== id));
-        toast.success("Bot deleted successfully");
-      } catch (error: any) {
-        toast.error("Error deleting bot: " + error.message);
-      }
+  const handleDeleteBot = async () => {
+    if (!deletingBotId) return;
+    
+    try {
+      const { error } = await supabase
+        .from("bots")
+        .delete()
+        .eq("id", deletingBotId);
+
+      if (error) throw error;
+      setBots(bots.filter((bot) => bot.id !== deletingBotId));
+      toast.success("Bot deleted successfully");
+    } catch (error: any) {
+      toast.error("Error deleting bot: " + error.message);
+      console.error("Delete error:", error);
+    } finally {
+      setDeletingBotId(null);
+      setConfirmDialogOpen(false);
     }
   };
 
@@ -133,7 +153,7 @@ const Dashboard = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteBot(bot.id)}
+                    onClick={() => openDeleteConfirmation(bot.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -143,6 +163,26 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Bot</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this bot? This action cannot be undone and will also 
+              delete all associated knowledge sources.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteBot}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
