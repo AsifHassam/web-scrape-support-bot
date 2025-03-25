@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -260,31 +261,36 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the API call with explicit JSON headers
+      // Make the API call with explicit content type headers
       fetch(apiUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       })
         .then(response => {
           console.log('API response status:', response.status);
+          console.log('API response headers:', [...response.headers.entries()]);
           
           if (!response.ok) {
             throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
           }
-          
-          // Check content type to see if we're getting HTML instead of JSON
-          const contentType = response.headers.get('content-type');
-          console.log('Content-Type header:', contentType);
-          
-          if (contentType && contentType.includes('text/html')) {
-            throw new Error('Received HTML response instead of JSON');
-          }
-          
-          return response.json().catch(error => {
-            console.error('Failed to parse response as JSON:', error);
-            throw new Error('Received non-JSON response from server');
+
+          // First get the raw text to verify what's being returned
+          return response.text().then(text => {
+            console.log('Raw API response text:', text);
+            
+            // Try to parse as JSON, but handle if it's not valid JSON
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              console.error('Failed to parse response as JSON:', e, 'Raw response:', text);
+              if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                throw new Error('Received HTML response instead of JSON');
+              }
+              throw new Error('Received invalid JSON response from server');
+            }
           });
         })
         .then(data => {
