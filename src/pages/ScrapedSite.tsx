@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { BookOpen, ArrowLeft, UserPlus } from 'lucide-react';
+import { BookOpen, ArrowLeft, UserPlus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
@@ -21,6 +21,7 @@ const ScrapedSite = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [screenshotError, setScreenshotError] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
   const { user } = useAuth();
   
   const { url } = (location.state as LocationState) || { url: '' };
@@ -133,9 +134,16 @@ const ScrapedSite = () => {
         </Card>
       </div>
       
-      {!user && (
+      {!user && showBanner && (
         <div className="fixed bottom-6 left-6 z-20">
-          <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md">
+          <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md relative">
+            <button 
+              onClick={() => setShowBanner(false)} 
+              className="absolute top-2 right-2 text-white/80 hover:text-white"
+              aria-label="Close banner"
+            >
+              <X className="h-4 w-4" />
+            </button>
             <p className="font-medium mb-2">Want to customize this chatbot?</p>
             <p className="text-sm mb-3">Register to brand this chatbot, add it to your website, and track analytics!</p>
             <Link to="/auth?signup=true">
