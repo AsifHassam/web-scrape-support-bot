@@ -25,7 +25,8 @@ const EmbeddableWidget = () => {
     }
   }, []);
   
-  return <ChatWidget botId={botId} />;
+  // Only render the ChatWidget if we have a botId
+  return botId ? <ChatWidget botId={botId} /> : null;
 };
 
 // Create a function to inject and initialize the widget
