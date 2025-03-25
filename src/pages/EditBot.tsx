@@ -11,6 +11,8 @@ import KnowledgeBase from "@/components/KnowledgeBase";
 import { toast } from "@/components/ui/use-toast";
 import { chatbotService } from "@/utils/chatbot";
 import { scrapeWebsite } from "@/utils/scraper";
+import { generateEmbedCode } from "@/utils/generateEmbedCode";
+import { Code } from "lucide-react";
 
 const EditBot = () => {
   const [bot, setBot] = useState<any>(null);
@@ -99,6 +101,27 @@ const EditBot = () => {
     
     fetchKnowledgeSources();
   }, [id]);
+
+  const copyEmbedCode = () => {
+    if (!id) return;
+    
+    const embedCode = generateEmbedCode(id);
+    navigator.clipboard.writeText(embedCode)
+      .then(() => {
+        toast({
+          title: "Copied!",
+          description: "Embed code copied to clipboard",
+        });
+      })
+      .catch(err => {
+        console.error("Failed to copy:", err);
+        toast({
+          title: "Error",
+          description: "Failed to copy embed code",
+          variant: "destructive",
+        });
+      });
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -132,7 +155,7 @@ const EditBot = () => {
             <Tabs defaultValue="analytics" className="space-y-6">
               <TabsList className="w-full md:w-auto mb-6">
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="integrations">Integrations</TabsTrigger>
                 <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
                 <TabsTrigger value="styling">Styling</TabsTrigger>
               </TabsList>
@@ -141,12 +164,55 @@ const EditBot = () => {
                 <BotAnalytics botId={id!} />
               </TabsContent>
               
-              <TabsContent value="settings">
+              <TabsContent value="integrations">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold mb-4">Bot Settings</h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Settings content will appear here.
-                  </p>
+                  <h2 className="text-xl font-semibold mb-4">Website Integration</h2>
+                  
+                  <div className="mb-6">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      Embed your chatbot on any website by adding the following code snippet to your HTML:
+                    </p>
+                    
+                    <div className="relative mt-4">
+                      <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md overflow-x-auto">
+                        <code className="text-sm">{generateEmbedCode(id!)}</code>
+                      </pre>
+                      
+                      <Button 
+                        size="sm" 
+                        className="absolute top-3 right-3"
+                        onClick={copyEmbedCode}
+                      >
+                        <Code className="h-4 w-4 mr-2" />
+                        Copy Code
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4 mt-8">
+                    <h3 className="text-lg font-medium">Integration Instructions</h3>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">1. Copy the embed code</h4>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Click the "Copy Code" button above to copy the code to your clipboard.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">2. Add to your website</h4>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Paste the code into the HTML of your website, ideally just before the closing <code>&lt;/body&gt;</code> tag.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">3. Save and refresh</h4>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Save your changes and refresh your website. Your chatbot should appear as a floating button in the bottom right corner.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
               
