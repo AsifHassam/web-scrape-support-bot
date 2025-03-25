@@ -1,12 +1,30 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
+import "./index.css";
+import { handleChatRequest } from "./api/chat";
 
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-
-// Make sure the root element exists before trying to render
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(<App />);
+// Handle API requests
+if (window.location.pathname.startsWith('/api/chat')) {
+  // If this is an API request, handle it with our API handler
+  handleChatRequest(new Request(window.location.href))
+    .then(response => {
+      return response.text();
+    })
+    .then(text => {
+      document.body.innerHTML = text;
+    })
+    .catch(error => {
+      document.body.innerHTML = JSON.stringify({ error: error.message });
+    });
 } else {
-  console.error("Root element not found - could not mount React application");
+  // Otherwise, render the React application
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>
+  );
 }

@@ -1,19 +1,21 @@
 
-import { NextApiRequest, NextApiResponse } from 'next';
-import { chatbotService } from '@/utils/chatbot';
+import express from 'express';
+import cors from 'cors';
+import { chatbotService } from './utils/chatbot';
 
-// This is an API endpoint that will handle chat requests from the widget
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  // Handle OPTIONS request (preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
+// Create Express app
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Enable CORS
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// API endpoint for chat
+app.get('/api/chat', async (req, res) => {
   const { botId, message } = req.query;
   
   if (!botId || !message) {
@@ -41,4 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+});
+
+// Start the server if this file is run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`API server running on port ${PORT}`);
+  });
 }
+
+// Export for testing or importing elsewhere
+export { app };

@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -249,7 +248,6 @@
     input.value = '';
     renderMessages();
     
-    // Determine API endpoint based on environment
     setTimeout(() => {
       // Determine the base URL based on the current environment
       let baseUrl;
@@ -257,15 +255,15 @@
       // Define allowed domains with their production URLs
       const productionUrl = 'https://web-scrape-support-bot.lovable.app';
       const allowedDomains = {
-        'localhost:8000': productionUrl,
-        '127.0.0.1:5500': productionUrl,
-        'localhost:8080': productionUrl
+        'localhost:8000': 'http://localhost:8000',
+        '127.0.0.1:5500': 'http://127.0.0.1:5500',
+        'localhost:8080': 'http://localhost:8080'
       };
       
       // Check current hostname and port
       const currentHost = window.location.host;
       
-      // If current host is in our allowed domains list, use the production URL
+      // If current host is in our allowed domains list, use it
       // Otherwise default to the production URL
       if (allowedDomains[currentHost]) {
         baseUrl = allowedDomains[currentHost];
@@ -283,7 +281,7 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the real API call
+      // Make the API call
       fetch(apiUrl, {
         method: 'GET',
         headers: {
