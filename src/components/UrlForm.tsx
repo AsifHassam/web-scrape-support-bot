@@ -39,8 +39,17 @@ const UrlForm = () => {
         );
         chatbotService.updateKnowledgeBase(knowledge, url);
         
+        console.log('Navigation triggered to scraped-site with URL:', url);
+        
         // Navigate to the scraped site view
         navigate('/scraped-site', { state: { url } });
+      } else {
+        console.error('No content available after scraping');
+        toast({
+          title: 'Error processing website',
+          description: 'No content could be extracted from this URL',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error scraping website:', error);

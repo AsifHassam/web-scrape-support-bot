@@ -13,6 +13,7 @@ export const useScrapeWebsite = () => {
       
       // Ensure URL has proper protocol
       const normalizedUrl = normalizeUrl(websiteUrl);
+      console.log('Scraping started for:', normalizedUrl);
       
       // Update status to indicate scraping has started
       setScrapeProgress(prev => ({ 
@@ -27,7 +28,7 @@ export const useScrapeWebsite = () => {
       
       // Simulate scraping with incremental progress updates
       for (let i = 1; i <= 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         setScrapeProgress(prev => ({
           ...prev,
@@ -49,15 +50,20 @@ export const useScrapeWebsite = () => {
         { title: 'Blog', content: 'Extracted blog content...', url: `${normalizedUrl}/blog` },
       ];
       
-      setScrapeProgress(prev => ({
-        ...prev,
-        status: 'complete',
+      const finalProgress = {
+        status: 'complete' as ScrapeStatus,
         progress: 1,
         processedUrls: 7,
         totalUrls: 7,
         content: scrapedContent,
-        results: scrapedContent
-      }));
+        results: scrapedContent,
+        websiteUrl: normalizedUrl
+      };
+      
+      setScrapeProgress(finalProgress);
+      console.log('Scraping completed with content:', finalProgress);
+      
+      return finalProgress;
       
     } catch (error) {
       console.error('Error scraping website:', error);

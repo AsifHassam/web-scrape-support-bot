@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { BookOpen, ArrowLeft } from 'lucide-react';
+import { BookOpen, ArrowLeft, Maximize } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
-import { ScrapeProgress } from '@/utils/scraper';
 
 interface LocationState {
   url: string;
@@ -20,17 +19,37 @@ const ScrapedSite = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [screenshotError, setScreenshotError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Extract URL from location state
   const { url } = (location.state as LocationState) || { url: '' };
+  
+  console.log('ScrapedSite component mounted with URL:', url);
   
   useEffect(() => {
     // If no URL was provided in the state, redirect back to home
     if (!url) {
+      console.warn('No URL in state, redirecting to home');
       navigate('/');
     } else {
       // Give some time for the screenshot to load
       setTimeout(() => setIsLoading(false), 1000);
     }
   }, [url, navigate]);
+  
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
   
   if (isLoading) {
     return (
@@ -59,6 +78,16 @@ const ScrapedSite = () => {
       </div>
       
       <div className="fixed top-4 right-4 z-10 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white dark:bg-gray-800 shadow-sm"
+          onClick={toggleFullscreen}
+        >
+          <Maximize className="h-4 w-4 mr-2" />
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        </Button>
+        
         <Dialog>
           <DialogTrigger asChild>
             <Button 
