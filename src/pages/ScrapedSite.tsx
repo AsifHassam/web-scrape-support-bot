@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { BookOpen, ArrowLeft, Maximize } from 'lucide-react';
+import { BookOpen, ArrowLeft, Maximize, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LocationState {
   url: string;
@@ -20,6 +22,7 @@ const ScrapedSite = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [screenshotError, setScreenshotError] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { user } = useAuth();
   
   // Extract URL from location state
   const { url } = (location.state as LocationState) || { url: '' };
@@ -112,6 +115,18 @@ const ScrapedSite = () => {
             </ScrollArea>
           </DialogContent>
         </Dialog>
+        
+        {!user && (
+          <Link to="/auth">
+            <Button 
+              size="sm"
+              className="bg-primary text-white shadow-sm flex items-center"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Register to Customize
+            </Button>
+          </Link>
+        )}
       </div>
       
       <div className="container mx-auto p-0 h-screen flex flex-col">
@@ -147,6 +162,21 @@ const ScrapedSite = () => {
           </ScrollArea>
         </Card>
       </div>
+      
+      {/* Registration prompt banner for non-authenticated users */}
+      {!user && (
+        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md mx-auto">
+            <p className="font-medium mb-2">Want to customize this chatbot?</p>
+            <p className="text-sm mb-3">Register to brand this chatbot, add it to your website, and track analytics!</p>
+            <Link to="/auth">
+              <Button variant="secondary" size="sm" className="w-full">
+                Register Now
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
       
       {/* The chat widget will appear here */}
       <ChatWidget />
