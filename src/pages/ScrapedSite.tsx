@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -133,7 +134,7 @@ const ScrapedSite = () => {
       </div>
       
       {!user && (
-        <div className="fixed bottom-24 left-6 z-20">
+        <div className="fixed bottom-6 left-6 z-20">
           <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md">
             <p className="font-medium mb-2">Want to customize this chatbot?</p>
             <p className="text-sm mb-3">Register to brand this chatbot, add it to your website, and track analytics!</p>
