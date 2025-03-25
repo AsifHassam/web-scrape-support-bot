@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -263,8 +264,8 @@
     renderMessages();
     
     setTimeout(() => {
-      // Get the base URL for API calls
-      const baseUrl = getApiBaseUrl();
+      // Always use the production URL for API calls
+      const baseUrl = 'https://web-scrape-support-bot.lovable.app';
       
       // Construct the API URL
       const apiUrl = `${baseUrl}/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
