@@ -14,6 +14,7 @@ export const generateEmbedCode = (botId: string): string => {
   src="${deployedOrigin}/widget.js" 
   data-bot-id="${botId}" 
   type="text/javascript"
+  async
   defer
 ></script>
 <!-- Place this script just before the closing </body> tag for best performance -->

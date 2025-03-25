@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
   
-  // Enforce content type for the response
+  // IMPORTANT: Set content type to JSON - this must come before any response is sent
   res.setHeader('Content-Type', 'application/json');
   
   const { botId } = req.query;
@@ -39,6 +39,7 @@ export default async function handler(req, res) {
     
     if (error) {
       console.error('Error fetching bot configuration:', error);
+      // Important: we still return a JSON response
       return res.status(500).json({ 
         error: 'Failed to fetch bot configuration', 
         details: error.message 
@@ -52,10 +53,12 @@ export default async function handler(req, res) {
     
     console.log('Bot configuration fetched successfully:', bot.id, bot.name);
     
-    // Return the bot configuration with proper JSON headers
-    return res.status(200).json({ bot });
+    // Return a clean bot response, stringifying manually to ensure JSON format
+    const responseData = { bot };
+    return res.status(200).send(JSON.stringify(responseData));
   } catch (error) {
     console.error('Unexpected error fetching bot configuration:', error);
+    // Ensure we still return JSON even in case of errors
     return res.status(500).json({ 
       error: 'Unexpected error occurred', 
       details: error.message 

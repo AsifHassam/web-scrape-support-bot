@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -184,11 +183,12 @@
     }
     
     try {
-      // Define API URL and add cache-busting parameter
+      // Define API URL with cache-busting parameter
       const timestamp = new Date().getTime();
       const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
       
+      // Make the fetch request with explicit headers for JSON
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -205,38 +205,34 @@
         contentLength: response.headers.get('content-length')
       });
       
+      // Check if response is ok
       if (!response.ok) {
-        // Try to get the error message text
         const errorText = await response.text();
         console.error('Failed to load bot configuration. Status:', response.status, 'Response:', errorText.substring(0, 200) + '...');
         return;
       }
       
-      // Check content type before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Invalid content type received:', contentType);
-        const htmlContent = await response.text();
-        console.error('Non-JSON response received:', htmlContent.substring(0, 200) + '...');
-        
-        // Fall back to default bot info
-        console.log('Using default bot info due to API error');
+      // Get the raw response text for debugging
+      const responseText = await response.text();
+      console.log('Raw response text received:', responseText.substring(0, 200) + '...');
+      
+      // Validate that the response is not empty
+      if (!responseText || responseText.trim() === '') {
+        console.error('Empty response received from bot config API');
         return;
       }
       
-      // Get the response as text first for debugging
-      const responseText = await response.text();
-      console.log('Raw bot config response text preview:', responseText.substring(0, 200) + '...');
-      
-      if (!responseText || responseText.trim() === '') {
-        console.error('Empty response received from bot config API');
+      // Check if the response might be HTML instead of JSON
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error('Received HTML instead of JSON. This indicates a server error or routing issue.');
+        console.log('Using default bot info due to API error');
         return;
       }
       
       // Try to parse the response text as JSON
       try {
         const data = JSON.parse(responseText);
-        console.log('Parsed bot config data:', data);
+        console.log('Successfully parsed bot config data:', data);
         
         if (data && data.bot) {
           botInfo = {
@@ -273,15 +269,11 @@
       } catch (parseError) {
         console.error('Error parsing bot configuration JSON:', parseError);
         console.error('Invalid JSON response received:', responseText.substring(0, 200) + '...');
-        
-        // Check if the response looks like HTML
-        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-          console.error('Received HTML instead of JSON. This might indicate a server error or redirection.');
-          console.log('Using default bot info due to API error');
-        }
+        console.log('Using default bot info due to JSON parsing error');
       }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
+      console.log('Using default bot info due to fetch error');
     }
   }
 
