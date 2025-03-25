@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,12 +24,14 @@ type BotType =
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [botType, setBotType] = useState<BotType | ''>('');
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,10 +51,12 @@ const Auth = () => {
       newErrors.email = "Please enter a valid email address";
     }
     
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    if (!isForgotPassword) {
+      if (!password) {
+        newErrors.password = "Password is required";
+      } else if (password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters";
+      }
     }
     
     if (!isLogin && step === 2 && !botType) {
@@ -70,7 +75,19 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?reset=true`,
+        });
+        
+        if (error) {
+          toast.error(error.message);
+          throw error;
+        }
+        
+        setResetPasswordSuccess(true);
+        toast.success("Password reset email sent! Check your inbox.");
+      } else if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message.includes("Email not confirmed")) {
@@ -144,6 +161,11 @@ const Auth = () => {
     setStep(1);
   };
 
+  const handleBackToLogin = () => {
+    setIsForgotPassword(false);
+    setResetPasswordSuccess(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 flex items-center justify-center px-4">
       <div className="absolute top-0 left-0 right-0">
@@ -171,7 +193,65 @@ const Auth = () => {
       </div>
       
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 space-y-6 mt-20">
-        {isLogin || step === 1 ? (
+        {isForgotPassword ? (
+          <>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Reset Your Password
+              </h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Enter your email and we'll send you instructions to reset your password
+              </p>
+            </div>
+
+            {resetPasswordSuccess ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg text-green-800 dark:text-green-300">
+                  <p>A password reset link has been sent to <strong>{email}</strong></p>
+                  <p className="text-sm mt-2">Check your email and follow the instructions to reset your password.</p>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={handleBackToLogin}
+                >
+                  Back to Login
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={errors.email ? "border-red-500" : ""}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email}</p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Sending..." : "Send Reset Link"}
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={handleBackToLogin}
+                  type="button"
+                >
+                  Back to Login
+                </Button>
+              </form>
+            )}
+          </>
+        ) : isLogin || step === 1 ? (
           <>
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -215,6 +295,16 @@ const Auth = () => {
                 )}
               </div>
 
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm text-primary hover:underline w-full text-right"
+                >
+                  Forgot password?
+                </button>
+              )}
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading
                   ? "Processing..."
@@ -257,21 +347,23 @@ const Auth = () => {
           </>
         )}
 
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setStep(1);
-              setErrors({});
-            }}
-            className="text-sm text-primary hover:underline"
-          >
-            {isLogin
-              ? "Don't have an account? Sign up"
-              : "Already have an account? Sign in"}
-          </button>
-        </div>
+        {!isForgotPassword && (
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setStep(1);
+                setErrors({});
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              {isLogin
+                ? "Don't have an account? Sign up"
+                : "Already have an account? Sign in"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

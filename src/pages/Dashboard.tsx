@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Dialog,
@@ -105,6 +105,10 @@ const Dashboard = () => {
             <span className="text-sm text-gray-600 dark:text-gray-300">
               {user?.email}
             </span>
+            <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
             <Button variant="outline" size="sm" onClick={() => signOut()}>
               Log Out
             </Button>

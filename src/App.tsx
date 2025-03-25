@@ -10,6 +10,7 @@ import ScrapedSite from "./pages/ScrapedSite";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import CreateBot from "./pages/CreateBot";
 import EditBot from "./pages/EditBot";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -32,6 +33,11 @@ const App = () => (
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
             <Route path="/create-bot" element={

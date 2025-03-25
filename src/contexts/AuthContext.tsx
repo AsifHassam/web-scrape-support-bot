@@ -15,6 +15,10 @@ type AuthContextType = {
     error: Error | null;
     data: { user: User | null; session: Session | null };
   }>;
+  resetPassword: (token: string, newPassword: string) => Promise<{
+    error: Error | null;
+    data: { user: User | null };
+  }>;
   signOut: () => Promise<void>;
   loading: boolean;
 };
@@ -70,6 +74,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error, data };
   };
 
+  const resetPassword = async (token: string, newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    return { error, data };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -82,6 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         signIn,
         signUp,
+        resetPassword,
         signOut,
         loading,
       }}
