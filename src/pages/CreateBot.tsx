@@ -167,10 +167,7 @@ const CreateBot = () => {
             size="sm"
             onClick={() => {
               navigator.clipboard.writeText(embedCode);
-              toast({
-                title: "Copied to clipboard",
-                description: "The embed code has been copied to your clipboard",
-              });
+              toast.success("The embed code has been copied to your clipboard");
             }}
           >
             <Copy className="h-4 w-4 mr-2" />
