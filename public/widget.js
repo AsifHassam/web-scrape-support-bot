@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -248,7 +249,6 @@
     input.value = '';
     renderMessages();
     
-    // Determine API endpoint based on environment
     setTimeout(() => {
       // Determine the base URL based on the current environment
       let baseUrl;
@@ -272,7 +272,7 @@
         baseUrl = productionUrl;
       }
       
-      const apiUrl = `${baseUrl}/api/chat?botId=${botId}&message=${encodeURIComponent(userMessage.content)}`;
+      const apiUrl = `${baseUrl}/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
       // Show typing indicator
@@ -294,6 +294,9 @@
       })
         .then(response => {
           console.log('API response received:', response);
+          if (!response.ok) {
+            throw new Error(`API responded with status ${response.status}`);
+          }
           return response.json();
         })
         .catch((error) => {
