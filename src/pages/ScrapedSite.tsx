@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,18 +22,15 @@ const ScrapedSite = () => {
   const [screenshotError, setScreenshotError] = useState(false);
   const { user } = useAuth();
   
-  // Extract URL from location state
   const { url } = (location.state as LocationState) || { url: '' };
   
   console.log('ScrapedSite component mounted with URL:', url);
   
   useEffect(() => {
-    // If no URL was provided in the state, redirect back to home
     if (!url) {
       console.warn('No URL in state, redirecting to home');
       navigate('/');
     } else {
-      // Give some time for the screenshot to load
       setTimeout(() => setIsLoading(false), 1000);
     }
   }, [url, navigate]);
@@ -48,7 +44,6 @@ const ScrapedSite = () => {
     );
   }
   
-  // Using the original screenshot method
   const screenshotUrl = `https://image.thum.io/get/width/1920/crop/900/maxAge/1/noanimate/https://${url.replace(/^https?:\/\//, '')}`;
   
   return (
@@ -85,14 +80,13 @@ const ScrapedSite = () => {
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-full mt-4">
-              {/* Cast the knowledge data to any to resolve the type mismatch issue */}
               <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData() as any} />
             </ScrollArea>
           </DialogContent>
         </Dialog>
         
         {!user && (
-          <Link to="/auth">
+          <Link to="/auth?signup=true">
             <Button 
               size="sm"
               className="bg-primary text-white shadow-sm flex items-center"
@@ -138,13 +132,12 @@ const ScrapedSite = () => {
         </Card>
       </div>
       
-      {/* Registration prompt banner for non-authenticated users - Moved to bottom left */}
       {!user && (
         <div className="fixed bottom-24 left-6 z-20">
           <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md">
             <p className="font-medium mb-2">Want to customize this chatbot?</p>
             <p className="text-sm mb-3">Register to brand this chatbot, add it to your website, and track analytics!</p>
-            <Link to="/auth">
+            <Link to="/auth?signup=true">
               <Button variant="secondary" size="sm" className="w-full">
                 Register Now
               </Button>
@@ -153,7 +146,6 @@ const ScrapedSite = () => {
         </div>
       )}
       
-      {/* The chat widget will appear here */}
       <ChatWidget />
       
       <div className="fixed bottom-24 right-6 z-10 pointer-events-none flex flex-col items-end">

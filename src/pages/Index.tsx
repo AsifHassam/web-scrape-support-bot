@@ -49,9 +49,9 @@ const Index = () => {
             
             <div className="pt-6 w-full flex flex-col items-center space-y-4">
               <UrlForm />
-              <Link to="/auth">
+              <Link to="/auth?signup=true">
                 <Button variant="link" className="text-primary">
-                  Or sign in to manage your bots
+                  Or sign up to manage your bots
                 </Button>
               </Link>
             </div>
@@ -252,7 +252,7 @@ const Index = () => {
                 Enter your website URL above to create an intelligent support bot in minutes. No coding required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/auth">
+                <Link to="/auth?signup=true">
                   <Button 
                     size="lg"
                     variant="secondary"
@@ -329,4 +329,3 @@ const Index = () => {
 };
 
 export default Index;
-

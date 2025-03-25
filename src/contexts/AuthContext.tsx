@@ -32,12 +32,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Configure auth with correct site URL using the proper method
-    // The supabase.auth.setSettings() method does not exist in the current API version
-    
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -68,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://web-scrape-support-bot.lovable.app/auth'
+        emailRedirectTo: `${window.location.origin}/auth`
       }
     });
     return { error, data };
