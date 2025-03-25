@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import Navbar from '@/components/Navbar';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -24,6 +25,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Contact = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -36,17 +39,36 @@ const Contact = () => {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    // In a real application, you would send this data to your backend
-    console.log(data);
+  const onSubmit = async (data: FormValues) => {
+    setIsSubmitting(true);
     
-    // Show success message
-    toast({
-      title: "Message sent!",
-      description: "We'll get back to you as soon as possible.",
-    });
-    
-    setIsSubmitted(true);
+    try {
+      // Send form data to Supabase Edge Function
+      const { data: responseData, error } = await supabase.functions.invoke('send-contact-email', {
+        body: data,
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Show success message
+      toast({
+        title: "Message sent!",
+        description: "We'll get back to you as soon as possible.",
+      });
+      
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Something went wrong",
+        description: "Your message couldn't be sent. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -157,7 +179,16 @@ const Contact = () => {
                     )}
                   />
                   
-                  <Button type="submit" className="w-full">Send Message</Button>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Message'
+                    )}
+                  </Button>
                 </form>
               </Form>
             )}
@@ -167,7 +198,7 @@ const Contact = () => {
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-2">Email Us</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                sales@chatwise.com
+                hello@liorra.io
               </p>
             </div>
             
