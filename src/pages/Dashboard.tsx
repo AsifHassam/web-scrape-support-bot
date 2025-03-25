@@ -16,6 +16,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Bot {
   id: string;
@@ -109,6 +110,7 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <div className="flex items-center space-x-4">
+            <ThemeToggle />
             <span className="text-sm text-gray-600 dark:text-gray-300">
               {user?.email}
             </span>
