@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -232,20 +231,6 @@
     body.scrollTop = body.scrollHeight;
   }
 
-  // Determine the base URL based on the current environment
-  function getApiBaseUrl() {
-    // Check if we're running in a localhost development environment
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1';
-    
-    // Define the production URL
-    const productionUrl = 'https://web-scrape-support-bot.lovable.app';
-    
-    // If we're in a localhost development environment, use the current origin
-    // Otherwise, use the production URL
-    return isLocalhost ? window.location.origin : productionUrl;
-  }
-
   // Function to handle sending messages
   function handleSendMessage(e) {
     e.preventDefault();
@@ -264,11 +249,8 @@
     renderMessages();
     
     setTimeout(() => {
-      // Always use the production URL for API calls
-      const baseUrl = 'https://web-scrape-support-bot.lovable.app';
-      
-      // Construct the API URL
-      const apiUrl = `${baseUrl}/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
+      // Fixed production URL
+      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
       // Show typing indicator
@@ -291,10 +273,12 @@
         .then(response => {
           console.log('API response received:', response);
           if (!response.ok) {
-            return response.text().then(text => {
-              console.error('Error response text:', text);
-              throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
-            });
+            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+          }
+          // First check if response is JSON before trying to parse it
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Expected JSON response but got content-type: ${contentType}`);
           }
           return response.json();
         })
@@ -348,4 +332,3 @@
   // Debug information
   console.log('Chat widget initialized with bot ID:', botId);
 })();
-
