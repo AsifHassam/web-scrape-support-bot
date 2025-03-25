@@ -5,8 +5,8 @@
  * @returns A string containing the HTML script tag
  */
 export const generateEmbedCode = (botId: string): string => {
-  // Use the public URL if available, otherwise fall back to origin
-  const deployedOrigin = "https://web-scrape-support-bot.lovable.app" || window.location.origin;
+  // Use the public URL for deployment
+  const deployedOrigin = "https://web-scrape-support-bot.lovable.app";
   
   // The script tag with the bot ID as a data attribute
   return `<script 
