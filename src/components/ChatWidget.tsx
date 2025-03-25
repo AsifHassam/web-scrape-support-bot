@@ -22,101 +22,7 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isKnowledgeLoaded, setIsKnowledgeLoaded] = useState(false);
-  const [botInfo, setBotInfo] = useState<{ name: string; company: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Load bot data and knowledge base
-  useEffect(() => {
-    const loadBotData = async () => {
-      if (!botId) {
-        console.error('No bot ID provided to ChatWidget');
-        return;
-      }
-      
-      try {
-        console.log('Loading data for bot ID:', botId);
-        
-        // Fetch bot information
-        const { data: botData, error: botError } = await supabase
-          .from('bots')
-          .select('*')
-          .eq('id', botId)
-          .single();
-        
-        if (botError) {
-          console.error('Error loading bot data:', botError);
-          return;
-        }
-        
-        if (botData) {
-          console.log('Bot data loaded successfully:', botData);
-          setBotInfo({
-            name: botData.name || 'Website Assistant',
-            company: botData.company || 'Your Company'
-          });
-          
-          // Update welcome message with bot name
-          setMessages([{
-            id: '1',
-            role: 'bot',
-            content: `Hello! I'm ${botData.name || 'your website assistant'}. How can I help you today?`,
-            timestamp: new Date(),
-          }]);
-          
-          // Fetch knowledge sources
-          const { data: sourcesData, error: sourcesError } = await supabase
-            .from('knowledge_sources')
-            .select('*')
-            .eq('bot_id', botId);
-          
-          if (sourcesError) {
-            console.error('Error loading knowledge sources:', sourcesError);
-            return;
-          }
-          
-          if (sourcesData && sourcesData.length > 0) {
-            console.log('Knowledge sources loaded:', sourcesData);
-            
-            // Extract content for the chatbot knowledge base
-            const websiteSources = sourcesData.filter(source => source.source_type === 'website');
-            
-            if (websiteSources.length > 0) {
-              // In a real implementation, you would load actual content from a database or API
-              // For this implementation, we'll create mock content based on the URLs
-              const mockKnowledge = websiteSources.flatMap(source => {
-                const url = source.content;
-                return [
-                  `Website: ${url}`,
-                  `This is content from ${url}`,
-                  `Important information from ${url}`,
-                  `Frequently asked questions from ${url}`,
-                  `Key features described on ${url}`,
-                  `Product details from ${url}`,
-                  `Contact information: support@example.com, phone: (555) 123-4567`,
-                  `Office hours: Monday-Friday 9am-5pm EST`,
-                ];
-              });
-              
-              chatbotService.updateKnowledgeBase(
-                mockKnowledge, 
-                websiteSources[0].content
-              );
-              
-              setIsKnowledgeLoaded(true);
-              console.log(`Loaded knowledge base for bot ${botId} with ${mockKnowledge.length} entries`);
-            }
-          } else {
-            console.warn('No knowledge sources found for bot ID:', botId);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading bot data:', error);
-      }
-    };
-    
-    loadBotData();
-  }, [botId]);
   
   const toggleWidget = () => {
     setIsOpen(prev => !prev);
@@ -139,9 +45,7 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
     setIsLoading(true);
     
     try {
-      console.log('Sending message to chatbot service:', inputMessage);
       const botResponse = await chatbotService.sendMessage(inputMessage);
-      console.log('Received response from chatbot service:', botResponse);
       setMessages(prev => [...prev, botResponse]);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -150,9 +54,7 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
         {
           id: Date.now().toString(),
           role: 'bot',
-          content: isKnowledgeLoaded 
-            ? 'Sorry, there was an error processing your message.' 
-            : 'I couldn\'t connect to the knowledge base. Please try again later.',
+          content: 'Sorry, there was an error processing your message.',
           timestamp: new Date(),
         },
       ]);
@@ -176,7 +78,7 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
               <div className="bg-primary h-8 w-8 rounded-full flex items-center justify-center">
                 <MessageCircle className="h-4 w-4 text-white" />
               </div>
-              <h3 className="font-medium">{botInfo?.name || "Website Assistant"}</h3>
+              <h3 className="font-medium">Website Assistant</h3>
             </div>
             <Button 
               variant="ghost" 

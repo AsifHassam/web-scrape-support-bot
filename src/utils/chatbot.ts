@@ -46,11 +46,6 @@ export class ChatbotService {
       status: 'complete',
       results: this.structureKnowledge(knowledge)
     };
-    
-    // Log a sample of the knowledge to validate content
-    if (knowledge.length > 0) {
-      console.log("Knowledge sample:", knowledge.slice(0, 3));
-    }
   }
   
   private structureKnowledge(knowledge: string[]): { url: string, title: string, content: string }[] {
@@ -62,7 +57,7 @@ export class ChatbotService {
     let currentContent: string[] = [];
     
     knowledge.forEach((item, index) => {
-      // Check if this looks like a title/URL entry (they were combined earlier)
+      // Check if this looks like a title/URL entry
       if (item.includes(' - http') || item.includes(' - https')) {
         // If we have a previous title and content, add it to the result
         if (currentTitle && currentContent.length > 0) {
@@ -112,9 +107,6 @@ export class ChatbotService {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, this.responseDelay));
     
-    console.log("Processing user message:", message);
-    console.log("Knowledge base size:", this.knowledgeBase.length);
-    
     // Generate a response based on the knowledge base and user message
     let response = this.findRelevantResponse(message);
     
@@ -141,7 +133,7 @@ export class ChatbotService {
     
     // If knowledge base is empty, provide a fallback response
     if (!this.knowledgeBase || this.knowledgeBase.length === 0) {
-      return "I don't have any information to work with yet. Please try scraping the website again.";
+      return "I don't have any information to work with yet. Please try scraping a website first.";
     }
 
     // Tokenize the message into meaningful words for better matching
@@ -149,8 +141,6 @@ export class ChatbotService {
       .replace(/[.,?!;:()"'-]/g, ' ')  // Remove punctuation
       .split(/\s+/)                    // Split by whitespace
       .filter(word => word.length > 2 && !this.isStopWord(word)); // Remove stop words and very short words
-    
-    console.log("Searching for keywords:", messageWords);
     
     if (messageWords.length === 0) {
       return `I need more specific information to help you. What would you like to know about ${this.websiteUrl || 'this website'}?`;
@@ -179,12 +169,9 @@ export class ChatbotService {
       .filter(item => item.score > 0)
       .map(item => item.content);
     
-    console.log(`Found ${relevantPieces.length} relevant pieces of content`);
-    
     // Construct the response
     if (relevantPieces.length > 0) {
       // For demo purposes, just return the highest scoring relevant content
-      // In a real implementation, we would use an LLM to synthesize a coherent answer
       return `Based on the website content: ${relevantPieces[0]}`;
     }
     

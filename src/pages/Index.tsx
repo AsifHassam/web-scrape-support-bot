@@ -6,7 +6,7 @@ import KnowledgeBase from '@/components/KnowledgeBase';
 import ChatWidget from '@/components/ChatWidget';
 import { ScrapeProgress, initialScrapeProgress } from '@/utils/scraper';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, Brain, Bot, Database, Globe, LogIn } from 'lucide-react';
+import { ArrowDown, Brain, Bot, Database, Globe } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
@@ -329,3 +329,4 @@ const Index = () => {
 };
 
 export default Index;
+
