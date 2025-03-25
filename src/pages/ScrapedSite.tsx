@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWidget from '@/components/ChatWidget';
-import { BookOpen, ArrowLeft, Maximize, UserPlus } from 'lucide-react';
+import { BookOpen, ArrowLeft, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import KnowledgeBase from '@/components/KnowledgeBase';
 import { chatbotService } from '@/utils/chatbot';
@@ -21,7 +21,6 @@ const ScrapedSite = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [screenshotError, setScreenshotError] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const { user } = useAuth();
   
   // Extract URL from location state
@@ -39,20 +38,6 @@ const ScrapedSite = () => {
       setTimeout(() => setIsLoading(false), 1000);
     }
   }, [url, navigate]);
-  
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  };
   
   if (isLoading) {
     return (
@@ -81,16 +66,6 @@ const ScrapedSite = () => {
       </div>
       
       <div className="fixed top-4 right-4 z-10 flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-white dark:bg-gray-800 shadow-sm"
-          onClick={toggleFullscreen}
-        >
-          <Maximize className="h-4 w-4 mr-2" />
-          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-        </Button>
-        
         <Dialog>
           <DialogTrigger asChild>
             <Button 
@@ -163,10 +138,10 @@ const ScrapedSite = () => {
         </Card>
       </div>
       
-      {/* Registration prompt banner for non-authenticated users */}
+      {/* Registration prompt banner for non-authenticated users - Moved to bottom left */}
       {!user && (
-        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md mx-auto">
+        <div className="fixed bottom-24 left-6 z-20">
+          <div className="bg-primary text-white p-4 rounded-lg shadow-lg max-w-md">
             <p className="font-medium mb-2">Want to customize this chatbot?</p>
             <p className="text-sm mb-3">Register to brand this chatbot, add it to your website, and track analytics!</p>
             <Link to="/auth">
