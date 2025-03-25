@@ -6,29 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import BotTypeSelector from "@/components/BotTypeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-
-type BotType = 
-  | 'educational' 
-  | 'health' 
-  | 'customer_support' 
-  | 'it_support' 
-  | 'ecommerce' 
-  | 'hr' 
-  | 'personal' 
-  | 'lead_generation' 
-  | 'other';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [botType, setBotType] = useState<BotType | ''>('');
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
@@ -57,10 +43,6 @@ const Auth = () => {
       } else if (password.length < 6) {
         newErrors.password = "Password must be at least 6 characters";
       }
-    }
-    
-    if (!isLogin && step === 2 && !botType) {
-      newErrors.botType = "Please select a bot type";
     }
     
     setErrors(newErrors);
@@ -102,63 +84,24 @@ const Auth = () => {
         toast.success("Successfully logged in!");
         navigate("/dashboard");
       } else {
-        if (step === 1) {
-          const { data } = await supabase.auth.signInWithPassword({
-            email,
-            password: "dummypassword"
-          });
-          
-          if (data.user) {
-            setErrors({
-              email: "An account with this email already exists"
-            });
-            setLoading(false);
-            return;
+        // Direct signup without the bot type selection
+        const { error, data } = await signUp(email, password);
+        if (error) {
+          if (error.message.includes("User already registered")) {
+            toast.error("This email is already registered");
           } else {
-            setStep(2);
-            setLoading(false);
-            return;
+            toast.error(error.message);
           }
-        } else {
-          const { error, data } = await signUp(email, password);
-          if (error) {
-            if (error.message.includes("User already registered")) {
-              toast.error("This email is already registered");
-            } else {
-              toast.error(error.message);
-            }
-            throw error;
-          }
-          
-          if (botType && data?.user) {
-            try {
-              const { error: prefError } = await supabase
-                .from('user_preferences')
-                .insert({ 
-                  user_id: data.user.id,
-                  bot_purpose: botType 
-                });
-                
-              if (prefError) {
-                console.error("Failed to save preference:", prefError);
-              }
-            } catch (err) {
-              console.error("Error storing user preferences:", err);
-            }
-          }
-          
-          toast.success("Registration successful! Please check your email for confirmation.");
+          throw error;
         }
+          
+        toast.success("Registration successful! Please check your email for confirmation.");
       }
     } catch (error: any) {
       console.error("Auth error:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleBackToStep1 = () => {
-    setStep(1);
   };
 
   const handleBackToLogin = () => {
@@ -251,7 +194,7 @@ const Auth = () => {
               </form>
             )}
           </>
-        ) : isLogin || step === 1 ? (
+        ) : (
           <>
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -310,40 +253,9 @@ const Auth = () => {
                   ? "Processing..."
                   : isLogin
                   ? "Sign In"
-                  : "Continue"}
+                  : "Sign Up"}
               </Button>
             </form>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center mb-4">
-              <Button variant="ghost" onClick={handleBackToStep1} className="p-0 mr-2">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tell us about your needs</h1>
-            </div>
-            
-            <BotTypeSelector 
-              value={botType} 
-              onChange={(value) => {
-                setBotType(value);
-                if (errors.botType) {
-                  setErrors({ ...errors, botType: '' });
-                }
-              }} 
-            />
-            
-            {errors.botType && (
-              <p className="text-sm text-red-500">{errors.botType}</p>
-            )}
-            
-            <Button 
-              onClick={handleAuth} 
-              className="w-full mt-6" 
-              disabled={loading}
-            >
-              {loading ? "Creating Account..." : "Create Account"}
-            </Button>
           </>
         )}
 
@@ -353,7 +265,6 @@ const Auth = () => {
               type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
-                setStep(1);
                 setErrors({});
               }}
               className="text-sm text-primary hover:underline"

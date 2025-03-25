@@ -161,10 +161,12 @@ const CreateBot = () => {
         return false;
       }
       
-      if (!formData.botType) {
-        toast.error("Please select a bot type");
-        return false;
-      }
+      // Don't require bot type selection
+      // This line is commented out, removing the validation requirement
+      // if (!formData.botType) {
+      //   toast.error("Please select a bot type");
+      //   return false;
+      // }
     }
     
     return true;
