@@ -8,11 +8,14 @@ export const generateEmbedCode = (botId: string): string => {
   // Use the fixed production URL
   const deployedOrigin = "https://web-scrape-support-bot.lovable.app";
   
-  // The script tag with the bot ID as a data attribute
-  return `<script 
+  // The script tag with the bot ID as a data attribute and proper attributes
+  return `<!-- Web Scrape Support Bot Widget - Begin -->
+<script 
   src="${deployedOrigin}/widget.js" 
   data-bot-id="${botId}" 
+  type="text/javascript"
   defer
 ></script>
-<!-- If you encounter any issues, make sure this script is placed just before the closing </body> tag -->`;
+<!-- Place this script just before the closing </body> tag for best performance -->
+<!-- Web Scrape Support Bot Widget - End -->`;
 };

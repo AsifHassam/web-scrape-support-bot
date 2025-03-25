@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 // API endpoint to fetch bot configuration
 export default async function handler(req, res) {
+  console.log('Bot config API called with request:', req.method, req.url);
+  
   // Set CORS headers to allow requests from any origin
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -13,9 +15,13 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
   
+  // Enforce content type for the response
+  res.setHeader('Content-Type', 'application/json');
+  
   const { botId } = req.query;
   
   if (!botId) {
+    console.error('Missing required parameter: botId');
     return res.status(400).json({ 
       error: 'Missing required parameter: botId is required' 
     });
@@ -40,10 +46,13 @@ export default async function handler(req, res) {
     }
     
     if (!bot) {
+      console.log('Bot not found for ID:', botId);
       return res.status(404).json({ error: 'Bot not found' });
     }
     
-    // Return the bot configuration
+    console.log('Bot configuration fetched successfully:', bot.id, bot.name);
+    
+    // Return the bot configuration with proper JSON headers
     return res.status(200).json({ bot });
   } catch (error) {
     console.error('Unexpected error fetching bot configuration:', error);

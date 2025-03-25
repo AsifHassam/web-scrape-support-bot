@@ -184,15 +184,19 @@
     }
     
     try {
-      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}`;
+      // Define API URL and add cache-busting parameter
+      const timestamp = new Date().getTime();
+      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        },
+        cache: 'no-store'
       });
       
       console.log('Bot config response status:', response.status);
@@ -208,9 +212,26 @@
         return;
       }
       
-      // First get the raw text to debug what's being returned
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid content type received:', contentType);
+        const htmlContent = await response.text();
+        console.error('Non-JSON response received:', htmlContent.substring(0, 200) + '...');
+        
+        // Fall back to default bot info
+        console.log('Using default bot info due to API error');
+        return;
+      }
+      
+      // Get the response as text first for debugging
       const responseText = await response.text();
       console.log('Raw bot config response text preview:', responseText.substring(0, 200) + '...');
+      
+      if (!responseText || responseText.trim() === '') {
+        console.error('Empty response received from bot config API');
+        return;
+      }
       
       // Try to parse the response text as JSON
       try {
@@ -256,6 +277,7 @@
         // Check if the response looks like HTML
         if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
           console.error('Received HTML instead of JSON. This might indicate a server error or redirection.');
+          console.log('Using default bot info due to API error');
         }
       }
     } catch (error) {
