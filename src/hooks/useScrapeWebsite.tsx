@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { scrapeWebsite, ScrapeProgress, initialScrapeProgress } from '../utils/scraper';
 import { chatbotService } from '../utils/chatbot';
-import { supabase } from '@/integrations/supabase/client';
 
 export function useScrapeWebsite() {
   const [scrapeProgress, setScrapeProgress] = useState<ScrapeProgress>(initialScrapeProgress);
@@ -12,7 +11,7 @@ export function useScrapeWebsite() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  const startScraping = useCallback(async (url: string, botId?: string) => {
+  const startScraping = useCallback(async (url: string) => {
     // Validate URL
     try {
       new URL(url);
@@ -46,36 +45,7 @@ export function useScrapeWebsite() {
         });
         
         console.log(`Training chatbot with ${knowledge.length} knowledge entries for ${url}`);
-        
-        // Update the knowledge base with the URL as identifier
         chatbotService.updateKnowledgeBase(knowledge, url);
-        
-        // If botId is provided, store the knowledge source in the database
-        if (botId) {
-          try {
-            // Check if this URL already exists as a source for this bot
-            const { data: existingSources } = await supabase
-              .from('knowledge_sources')
-              .select('*')
-              .eq('bot_id', botId)
-              .eq('source_type', 'website')
-              .eq('content', url);
-            
-            if (!existingSources || existingSources.length === 0) {
-              // Add new knowledge source
-              await supabase
-                .from('knowledge_sources')
-                .insert({
-                  bot_id: botId,
-                  source_type: 'website',
-                  content: url
-                });
-            }
-          } catch (dbError) {
-            console.error("Error saving knowledge source:", dbError);
-            // Continue execution even if saving to DB fails
-          }
-        }
         
         toast.success("Website scraped successfully! Bot is ready to answer questions.");
       }
