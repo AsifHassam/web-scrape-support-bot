@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, FileUp, Globe, ClipboardCopy, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileUp, Globe, ClipboardCopy, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useScrapeWebsite } from "@/hooks/useScrapeWebsite";
 import ChatbotEmulator from "@/components/ChatbotEmulator";
 import { initialScrapeProgress } from "@/utils/scraper";
 import { chatbotService } from "@/utils/chatbot";
+import { generateEmbedCode } from '@/utils/generateEmbedCode';
 
 interface BotFormData {
   name: string;
@@ -38,7 +39,6 @@ const CreateBot = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Generate embed code when bot is created
   useEffect(() => {
     if (botId) {
       const code = `<script>
@@ -85,7 +85,6 @@ const CreateBot = () => {
   };
 
   const handleNext = async () => {
-    // Form validation based on current step
     if (step === 1) {
       if (formData.knowledgeType === "website" && !formData.websiteUrl) {
         toast.error("Please enter a website URL");
@@ -102,11 +101,9 @@ const CreateBot = () => {
       }
     }
 
-    // If we're on the last step, save everything
     if (step === 3) {
       setLoading(true);
       try {
-        // Create the bot
         const { data: botData, error: botError } = await supabase
           .from("bots")
           .insert({
@@ -122,7 +119,6 @@ const CreateBot = () => {
         const newBotId = botData.id;
         setBotId(newBotId);
 
-        // Save knowledge source
         const sourceType = formData.knowledgeType === "website" ? "website" : "document";
         const content = formData.knowledgeType === "website" ? formData.websiteUrl : "PDF files uploaded";
         
@@ -144,7 +140,6 @@ const CreateBot = () => {
         setLoading(false);
       }
     } else {
-      // Otherwise, proceed to next step
       setStep(step + 1);
     }
   };
@@ -158,6 +153,42 @@ const CreateBot = () => {
     setCopied(true);
     toast.success("Code copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const renderEmbedCode = () => {
+    const embedCode = generateEmbedCode(botId || 'demo-bot');
+    
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Embed Code</h3>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(embedCode);
+              toast({
+                title: "Copied to clipboard",
+                description: "The embed code has been copied to your clipboard",
+              });
+            }}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Copy
+          </Button>
+        </div>
+        
+        <div className="relative">
+          <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
+            {embedCode}
+          </pre>
+        </div>
+        
+        <div className="text-sm text-muted-foreground">
+          <p>Add this code to your website to embed the chatbot widget.</p>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -175,7 +206,6 @@ const CreateBot = () => {
           {step === 4 ? "Your Bot is Ready!" : "Create New Chatbot"}
         </h1>
 
-        {/* Progress indicator */}
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-8 dark:bg-gray-700">
           <div
             className="bg-primary h-2.5 rounded-full transition-all duration-300"
@@ -183,7 +213,6 @@ const CreateBot = () => {
           ></div>
         </div>
 
-        {/* Step 1: Knowledge Base */}
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -235,7 +264,6 @@ const CreateBot = () => {
                     </div>
                   </div>
                   
-                  {/* Scrape status display */}
                   {scrapeProgress.status !== 'idle' && (
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                       <h3 className="font-medium mb-2">Scraping Status</h3>
@@ -311,7 +339,6 @@ const CreateBot = () => {
           </div>
         )}
 
-        {/* Step 2: Bot Details */}
         {step === 2 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -346,7 +373,6 @@ const CreateBot = () => {
           </div>
         )}
 
-        {/* Step 3: Review */}
         {step === 3 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -387,7 +413,6 @@ const CreateBot = () => {
           </div>
         )}
 
-        {/* Step 4: Embed Code */}
         {step === 4 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -398,20 +423,7 @@ const CreateBot = () => {
             </p>
 
             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 relative">
-              <pre className="text-sm text-gray-800 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                {embedCode}
-              </pre>
-              <Button
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={copyToClipboard}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <ClipboardCopy className="h-4 w-4" />
-                )}
-              </Button>
+              {renderEmbedCode()}
             </div>
 
             <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
@@ -432,7 +444,6 @@ const CreateBot = () => {
           </div>
         )}
 
-        {/* Navigation buttons */}
         {step < 4 && (
           <div className="flex justify-between mt-8">
             {step > 1 ? (
@@ -450,7 +461,6 @@ const CreateBot = () => {
         )}
       </div>
 
-      {/* Chat Widget Preview */}
       <div className="hidden lg:block lg:w-5/12 bg-gray-100 dark:bg-gray-800 p-8 border-l border-gray-200 dark:border-gray-700">
         <div className="sticky top-8">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
