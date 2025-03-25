@@ -260,7 +260,7 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the API call
+      // Make the API call with explicit JSON headers
       fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -269,31 +269,22 @@
       })
         .then(response => {
           console.log('API response status:', response.status);
-          console.log('API response headers:', [...response.headers.entries()]);
           
           if (!response.ok) {
             throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
           }
           
+          // Check content type to see if we're getting HTML instead of JSON
           const contentType = response.headers.get('content-type');
           console.log('Content-Type header:', contentType);
           
-          // Return the text content first to see what we're getting
-          return response.text().then(text => {
-            console.log('Raw API response text:', text);
-            
-            // Only try to parse as JSON if it doesn't start with <!DOCTYPE or <html
-            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-              throw new Error('Received HTML instead of JSON response');
-            }
-            
-            // Try to parse as JSON, but handle if it's not valid JSON
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              console.error('Failed to parse response as JSON:', e);
-              throw new Error('Received non-JSON response from server');
-            }
+          if (contentType && contentType.includes('text/html')) {
+            throw new Error('Received HTML response instead of JSON');
+          }
+          
+          return response.json().catch(error => {
+            console.error('Failed to parse response as JSON:', error);
+            throw new Error('Received non-JSON response from server');
           });
         })
         .then(data => {
