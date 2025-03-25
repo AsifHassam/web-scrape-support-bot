@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,8 +40,8 @@ const EditBot = () => {
         setBotName(data.name || "AI Assistant");
         setCompanyName(data.company || "Your Company");
         
-        // The primary_color might not exist yet in the database schema, so we'll use the default if it's not there
-        setBotColor(data.primary_color || "#3b82f6");
+        // Since primary_color is not in the database schema yet, we'll just use our default state value
+        // If we later add this column to the database, we can update this code
       } catch (error: any) {
         console.error("Error fetching bot:", error);
         toast({
@@ -136,21 +135,23 @@ const EditBot = () => {
     if (!id) return;
 
     try {
+      const updateData = {
+        name: values.botName,
+        company: values.companyName,
+      };
+      
       const { error } = await supabase
         .from("bots")
-        .update({
-          name: values.botName,
-          company: values.companyName,    // Changed from company_name to company to match schema
-          primary_color: values.primaryColor,
-        })
+        .update(updateData)
         .eq("id", id);
 
       if (error) throw error;
 
-      // Update local state
       setBotName(values.botName);
       setCompanyName(values.companyName);
       setBotColor(values.primaryColor);
+
+      localStorage.setItem(`botColor_${id}`, values.primaryColor);
 
       toast({
         title: "Styles updated",
@@ -166,6 +167,15 @@ const EditBot = () => {
     }
   };
   
+  useEffect(() => {
+    if (id) {
+      const savedColor = localStorage.getItem(`botColor_${id}`);
+      if (savedColor) {
+        setBotColor(savedColor);
+      }
+    }
+  }, [id]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
