@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BotAnalytics from "@/components/BotAnalytics";
+import KnowledgeBaseManager from "@/components/KnowledgeBaseManager";
+import { toast } from "@/components/ui/use-toast";
 
 const EditBot = () => {
   const [bot, setBot] = useState<any>(null);
@@ -28,6 +30,11 @@ const EditBot = () => {
         setBot(data);
       } catch (error: any) {
         console.error("Error fetching bot:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load bot information",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -87,12 +94,7 @@ const EditBot = () => {
               </TabsContent>
               
               <TabsContent value="knowledge">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold mb-4">Knowledge Base</h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Knowledge base content will appear here.
-                  </p>
-                </div>
+                <KnowledgeBaseManager botId={id!} />
               </TabsContent>
               
               <TabsContent value="styling">

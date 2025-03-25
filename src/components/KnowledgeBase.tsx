@@ -29,7 +29,23 @@ export const KnowledgeBase = ({ scrapeResult }: KnowledgeBaseProps) => {
   };
   
   if (!results.length) {
-    return null;
+    return (
+      <Card className="w-full overflow-hidden border-2 shadow-lg glass-card">
+        <CardHeader className="bg-gray-50 dark:bg-gray-800/50 pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">Knowledge Base</CardTitle>
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+              Empty
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+            No knowledge entries available. Add content to build your knowledge base.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
   
   return (

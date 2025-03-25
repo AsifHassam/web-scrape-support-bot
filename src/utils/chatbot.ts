@@ -48,6 +48,18 @@ export class ChatbotService {
     };
   }
   
+  public addToKnowledgeBase(newKnowledge: string): void {
+    this.knowledgeBase.push(newKnowledge);
+    console.log(`Knowledge base updated with new entry. Total entries: ${this.knowledgeBase.length}`);
+    
+    // Update the structured data
+    this.knowledgeData.results.push({
+      url: this.websiteUrl || 'manual-entry',
+      title: 'Manual Entry',
+      content: newKnowledge
+    });
+  }
+  
   private structureKnowledge(knowledge: string[]): { url: string, title: string, content: string }[] {
     // For demonstration, we'll structure the flat knowledge list into page-like components
     const structured: { url: string, title: string, content: string }[] = [];
