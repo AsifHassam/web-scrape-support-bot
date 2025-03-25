@@ -24,6 +24,7 @@ interface Bot {
   company: string;
   created_at: string;
   bot_type?: string;
+  active_conversations?: number;
 }
 
 const Dashboard = () => {
@@ -35,23 +36,43 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchBots = async () => {
+    const fetchBotsAndConversations = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch bots
+        const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) throw error;
-        setBots(data || []);
+        if (botsError) throw botsError;
+        
+        // Get active conversations count for each bot
+        const botsWithCounts = await Promise.all((botsData || []).map(async (bot) => {
+          // Query conversations that are not closed
+          const { count, error: countError } = await supabase
+            .from("conversations")
+            .select("*", { count: 'exact', head: true })
+            .eq("bot_id", bot.id)
+            .neq("status", "closed");
+          
+          if (countError) {
+            console.error("Error fetching conversation count:", countError);
+            return { ...bot, active_conversations: 0 };
+          }
+          
+          return { ...bot, active_conversations: count || 0 };
+        }));
+        
+        setBots(botsWithCounts);
       } catch (error: any) {
         toast.error("Error fetching bots: " + error.message);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBots();
+    fetchBotsAndConversations();
   }, []);
 
   const handleCreateBot = () => {
@@ -178,7 +199,7 @@ const Dashboard = () => {
                   
                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     <MessageSquare className="h-4 w-4 mr-1.5" />
-                    <span>11 Active conversations</span>
+                    <span>{bot.active_conversations || 0} Active conversation{bot.active_conversations !== 1 ? 's' : ''}</span>
                   </div>
                   
                   {bot.bot_type && (
