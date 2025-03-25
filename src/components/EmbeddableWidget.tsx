@@ -1,10 +1,31 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ChatWidget from './ChatWidget';
 
 const EmbeddableWidget = () => {
-  return <ChatWidget />;
+  const [botId, setBotId] = useState<string | undefined>(undefined);
+  
+  useEffect(() => {
+    // Extract the botId from the script tag's data attribute
+    const scriptTag = document.currentScript || 
+      document.querySelector('script[src*="widget-script.js"]') || 
+      document.querySelector('script[src*="embedWidget"]');
+    
+    if (scriptTag) {
+      const dataBot = scriptTag.getAttribute('data-bot-id');
+      if (dataBot) {
+        console.log('Bot ID found:', dataBot);
+        setBotId(dataBot);
+      } else {
+        console.error('No bot ID found in script tag');
+      }
+    } else {
+      console.error('Could not find script tag');
+    }
+  }, []);
+  
+  return <ChatWidget botId={botId} />;
 };
 
 // Create a function to inject and initialize the widget
