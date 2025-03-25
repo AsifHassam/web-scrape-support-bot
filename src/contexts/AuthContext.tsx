@@ -28,11 +28,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Configure Supabase auth with the correct redirect URL
-    supabase.auth.setSettings({
-      site_url: 'https://web-scrape-support-bot.lovable.app'
-    });
-
+    // Configure auth with correct site URL using the proper method
+    // The supabase.auth.setSettings() method does not exist in the current API version
+    
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -61,9 +59,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
+    // Set the redirect URL when signing up to ensure proper redirection after email confirmation
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: 'https://web-scrape-support-bot.lovable.app/auth'
+      }
     });
     return { error, data };
   };

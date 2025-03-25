@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
