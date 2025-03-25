@@ -44,9 +44,14 @@ function injectChatWidget() {
   widgetContainer.id = 'support-bot-widget-container';
   document.body.appendChild(widgetContainer);
 
-  // Mount the React component to the container
-  const root = createRoot(widgetContainer);
-  root.render(<EmbeddableWidget />);
+  try {
+    // Mount the React component to the container
+    const root = createRoot(widgetContainer);
+    root.render(<EmbeddableWidget />);
+    console.log('Chat widget injected successfully');
+  } catch (error) {
+    console.error('Failed to inject chat widget:', error);
+  }
 }
 
 // Make sure the DOM is fully loaded before injecting

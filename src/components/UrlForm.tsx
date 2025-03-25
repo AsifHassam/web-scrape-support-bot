@@ -5,7 +5,12 @@ import { Input } from '@/components/ui/input';
 import { useScrapeWebsite } from '@/hooks/useScrapeWebsite';
 import { ScrapeStatus } from './ScrapeStatus';
 
-export const UrlForm = () => {
+interface UrlFormProps {
+  botId?: string;
+  onScrapeComplete?: (url: string) => void;
+}
+
+export const UrlForm = ({ botId, onScrapeComplete }: UrlFormProps) => {
   const [url, setUrl] = useState('');
   const [isUrlFocused, setIsUrlFocused] = useState(false);
   const { scrapeProgress, isLoading, startScraping } = useScrapeWebsite();
@@ -20,7 +25,13 @@ export const UrlForm = () => {
       processedUrl = `https://${url}`;
     }
     
-    await startScraping(processedUrl);
+    // Start scraping with the botId if provided
+    const result = await startScraping(processedUrl, botId);
+    
+    // Call the callback if provided
+    if (result && result.status === 'complete' && onScrapeComplete) {
+      onScrapeComplete(processedUrl);
+    }
   };
   
   return (

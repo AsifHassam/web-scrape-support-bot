@@ -11,6 +11,9 @@ import ChatbotEmulator from "@/components/ChatbotEmulator";
 import { ScrapeProgress, initialScrapeProgress } from "@/utils/scraper";
 import { useScrapeWebsite } from "@/hooks/useScrapeWebsite";
 import { generateEmbedCode } from "@/utils/generateEmbedCode";
+import UrlForm from "@/components/UrlForm";
+import { KnowledgeBase } from "@/components/KnowledgeBase";
+import { chatbotService } from "@/utils/chatbot";
 
 interface Bot {
   id: string;
@@ -37,6 +40,7 @@ const EditBot = () => {
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [scrapeProgress, setScrapeProgress] = useState<ScrapeProgress>(initialScrapeProgress);
   const { startScraping } = useScrapeWebsite();
+  const [showScrapeInterface, setShowScrapeInterface] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -86,6 +90,12 @@ const EditBot = () => {
             }))
           };
           setScrapeProgress(mockProgress);
+          
+          // Update the chatbot service with the knowledge base
+          chatbotService.updateKnowledgeBase(
+            websiteSources.map(source => `Content from ${source.content}`),
+            websiteSources[0]?.content
+          );
         }
       } catch (error: any) {
         toast.error("Error loading bot: " + error.message);
@@ -124,36 +134,10 @@ const EditBot = () => {
     
     try {
       toast.info("Starting scrape process...");
-      const progress = await startScraping(websiteUrl);
+      // Pass the bot ID to the scraping function to properly associate it
+      const progress = await startScraping(websiteUrl, id);
       
-      // If scrape was successful, add or update the knowledge source
-      if (progress && progress.status === 'complete' && id) {
-        // Check if this URL already exists as a source
-        const existingSource = knowledgeSources.find(
-          source => source.source_type === 'website' && source.content === websiteUrl
-        );
-        
-        if (existingSource) {
-          // Update timestamp of existing source
-          const { error } = await supabase
-            .from("knowledge_sources")
-            .update({ created_at: new Date().toISOString() })
-            .eq("id", existingSource.id);
-            
-          if (error) throw error;
-        } else {
-          // Add new knowledge source
-          const { error } = await supabase
-            .from("knowledge_sources")
-            .insert({
-              bot_id: id,
-              source_type: 'website',
-              content: websiteUrl
-            });
-            
-          if (error) throw error;
-        }
-        
+      if (progress && progress.status === 'complete') {
         // Refresh knowledge sources
         const { data, error } = await supabase
           .from("knowledge_sources")
@@ -164,17 +148,24 @@ const EditBot = () => {
         setKnowledgeSources(data || []);
         
         toast.success("Knowledge base updated successfully");
+        setScrapeProgress(progress);
       }
     } catch (error: any) {
       toast.error("Error scraping website: " + error.message);
     }
   };
 
-  const handleAddMoreKnowledge = () => {
-    // Navigate to create-bot with the current bot ID to add more knowledge
+  const handleScrapeWebsite = async (websiteUrl: string) => {
     if (id) {
-      navigate(`/create-bot?edit=${id}`);
+      await handleRescrape(websiteUrl);
+      // Hide the scrape interface after completion
+      setShowScrapeInterface(false);
     }
+  };
+
+  const handleAddMoreKnowledge = () => {
+    // Instead of navigating away, just show the scrape interface
+    setShowScrapeInterface(true);
   };
 
   const renderEmbedCode = () => {
@@ -279,40 +270,63 @@ const EditBot = () => {
               Your bot's knowledge sources are listed below. You can add new sources or update existing ones.
             </p>
             
-            {knowledgeSources.length > 0 ? (
-              <div className="space-y-4">
-                {knowledgeSources.map(source => (
-                  <div key={source.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-md">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{source.source_type === 'website' ? '🌐 Website URL' : '📄 Document'}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{source.content}</p>
-                      </div>
-                      
-                      {source.source_type === 'website' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleRescrape(source.content)}
-                        >
-                          Re-scrape
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            {showScrapeInterface ? (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-4">Add Website Knowledge</h3>
+                <UrlForm onScrapeComplete={(url) => handleScrapeWebsite(url)} />
+                <Button 
+                  variant="outline" 
+                  className="mt-4" 
+                  onClick={() => setShowScrapeInterface(false)}
+                >
+                  Cancel
+                </Button>
               </div>
             ) : (
-              <p className="text-gray-500 italic">No knowledge sources found for this bot.</p>
+              <>
+                {knowledgeSources.length > 0 ? (
+                  <div className="space-y-4">
+                    {knowledgeSources.map(source => (
+                      <div key={source.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-md">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{source.source_type === 'website' ? '🌐 Website URL' : '📄 Document'}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{source.content}</p>
+                          </div>
+                          
+                          {source.source_type === 'website' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleRescrape(source.content)}
+                            >
+                              Re-scrape
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No knowledge sources found for this bot.</p>
+                )}
+                
+                <div className="mt-6">
+                  <Button onClick={handleAddMoreKnowledge}>
+                    Add More Knowledge
+                  </Button>
+                </div>
+              </>
             )}
-            
-            <div className="mt-6">
-              <Button onClick={handleAddMoreKnowledge}>
-                Add More Knowledge
-              </Button>
-            </div>
           </div>
         </div>
+        
+        {/* Knowledge Base Display Section (when applicable) */}
+        {scrapeProgress.status === 'complete' && (
+          <div className="mt-8">
+            <KnowledgeBase scrapeResult={scrapeProgress} />
+          </div>
+        )}
         
         {/* Embed code section */}
         {renderEmbedCode()}
