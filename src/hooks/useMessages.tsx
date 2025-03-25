@@ -34,10 +34,16 @@ export const useMessages = (conversationId: string | null) => {
       
       if (error) throw error;
       
-      setMessages(data || []);
+      // Cast the data to the proper Message type
+      const typedMessages = (data || []).map(msg => ({
+        ...msg,
+        role: msg.role as 'user' | 'bot' | 'human'
+      }));
+      
+      setMessages(typedMessages);
       
       // Mark messages as read
-      const unreadMessages = data?.filter(msg => !msg.read && msg.role === 'user') || [];
+      const unreadMessages = typedMessages.filter(msg => !msg.read && msg.role === 'user') || [];
       if (unreadMessages.length > 0) {
         await supabase
           .from("messages")
@@ -79,8 +85,11 @@ export const useMessages = (conversationId: string | null) => {
         .update({ updated_at: new Date().toISOString() })
         .eq("id", conversationId);
       
-      // Add message to state
-      setMessages(prev => [...prev, data]);
+      // Add message to state, ensuring proper typing
+      setMessages(prev => [...prev, {
+        ...data,
+        role: data.role as 'user' | 'bot' | 'human'
+      }]);
       
       return data;
     } catch (error) {

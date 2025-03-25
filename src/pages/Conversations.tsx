@@ -1,36 +1,17 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  ArrowLeft,
-  Search,
-  User,
-  MessageSquare,
-  Bot,
-  Archive
-} from "lucide-react";
+import { MessageSquare, User, Bot, Archive } from "lucide-react";
 import { toast } from "sonner";
 import ConversationList from "@/components/ConversationList";
 import ChatInterface from "@/components/ChatInterface";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalTabs } from "@/components/VerticalTabs";
-import { useConversations } from "@/hooks/useConversations";
-
-interface Conversation {
-  id: string;
-  customer_name: string;
-  last_message: string;
-  last_message_time: string;
-  status: 'ai' | 'human' | 'closed';
-  unread: boolean;
-  customer_email?: string;
-  customer_phone?: string;
-  customer_location?: string;
-}
+import { useConversations, Conversation } from "@/hooks/useConversations";
+import ConversationHeader from "@/components/ConversationHeader";
+import SearchBar from "@/components/SearchBar";
+import EmptyConversationState from "@/components/EmptyConversationState";
 
 const Conversations = () => {
   const { botId } = useParams<{ botId: string }>();
@@ -38,7 +19,6 @@ const Conversations = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<'open' | 'my' | 'unassigned' | 'closed'>('open');
   const [botName, setBotName] = useState<string>("");
-  const navigate = useNavigate();
   const { playNotificationSound } = useUnreadMessages();
   
   // Get conversation counts for each tab
@@ -170,46 +150,16 @@ const Conversations = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="mr-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {botName} - Conversations
-            </h1>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </Button>
-          </div>
-        </div>
-      </header>
+      <ConversationHeader botName={botName} />
 
       <div className="container mx-auto p-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-8rem)]">
           <div className="col-span-1 md:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search conversations..."
-                  className="pl-9 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              <SearchBar 
+                searchQuery={searchQuery} 
+                setSearchQuery={setSearchQuery} 
+              />
             </div>
             
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -239,17 +189,7 @@ const Conversations = () => {
                 onClose={() => handleCloseChat(selectedConversation.id)}
               />
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center p-6">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                    No conversation selected
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Select a conversation from the list to view messages
-                  </p>
-                </div>
-              </div>
+              <EmptyConversationState />
             )}
           </div>
         </div>

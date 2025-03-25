@@ -1,21 +1,10 @@
 
-import { useConversations } from "@/hooks/useConversations";
+import { useConversations, Conversation } from "@/hooks/useConversations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface Conversation {
-  id: string;
-  customer_name: string;
-  last_message: string;
-  last_message_time: string;
-  status: 'ai' | 'human' | 'closed';
-  unread: boolean;
-  customer_email?: string;
-  customer_location?: string;
-}
 
 interface ConversationListProps {
   botId: string;

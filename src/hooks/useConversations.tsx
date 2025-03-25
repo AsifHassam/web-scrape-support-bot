@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Conversation {
+export interface Conversation {
   id: string;
   customer_name: string;
-  last_message?: string;
-  last_message_time?: string;
+  last_message: string;
+  last_message_time: string;
   status: 'ai' | 'human' | 'closed';
   unread: boolean;
   customer_email?: string;
