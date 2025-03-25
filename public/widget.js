@@ -126,10 +126,26 @@
   document.head.appendChild(style);
 
   // Get the bot ID from the script tag
-  let scriptTag = document.currentScript;
-  if (!scriptTag) {
-    scriptTag = document.querySelector('script[src*="widget.js"]');
-  }
+  const getCurrentScript = () => {
+    // For modern browsers
+    if (document.currentScript) {
+      return document.currentScript;
+    }
+    
+    // For older browsers
+    const scripts = document.getElementsByTagName('script');
+    for (let i = 0; i < scripts.length; i++) {
+      const script = scripts[i];
+      const src = script.getAttribute('src') || '';
+      if (src.includes('widget.js')) {
+        return script;
+      }
+    }
+    
+    return null;
+  };
+  
+  const scriptTag = getCurrentScript();
   
   let botId = '';
   if (scriptTag) {
@@ -162,6 +178,11 @@
 
   // Function to fetch bot configuration from the server
   async function fetchBotConfig() {
+    if (!botId) {
+      console.error('No bot ID found, cannot fetch configuration');
+      return;
+    }
+    
     try {
       const response = await fetch(`https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}`);
       
@@ -307,6 +328,16 @@
     input.value = '';
     renderMessages();
     
+    // Check if we have a valid botId
+    if (!botId) {
+      messages.push({
+        role: 'bot',
+        content: "Sorry, I can't process your message because the bot ID is missing."
+      });
+      renderMessages();
+      return;
+    }
+    
     setTimeout(() => {
       // Use the correct absolute URL to the deployed API
       const apiUrl = `https://web-scrape-support-bot.lovable.app/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
@@ -319,8 +350,15 @@
       typingIndicator.innerHTML = 'Typing...';
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
-      // Make the API call with explicit content type headers
-      fetch(apiUrl, {
+      // Generate a random session ID if one doesn't exist yet
+      const sessionId = localStorage.getItem('chatSessionId') || 
+                      Math.random().toString(36).substring(2, 15);
+      
+      // Store the session ID for future reference
+      localStorage.setItem('chatSessionId', sessionId);
+      
+      // Make the API call with explicit content type headers and session ID
+      fetch(`${apiUrl}&sessionId=${encodeURIComponent(sessionId)}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -329,7 +367,6 @@
       })
         .then(response => {
           console.log('API response status:', response.status);
-          console.log('API response headers:', [...response.headers.entries()]);
           
           if (!response.ok) {
             throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
@@ -343,10 +380,7 @@
             try {
               return JSON.parse(text);
             } catch (e) {
-              console.error('Failed to parse response as JSON:', e, 'Raw response:', text);
-              if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-                throw new Error('Received HTML response instead of JSON');
-              }
+              console.error('Failed to parse response as JSON:', e);
               throw new Error('Received invalid JSON response from server');
             }
           });

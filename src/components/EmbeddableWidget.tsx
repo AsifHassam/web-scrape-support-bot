@@ -7,10 +7,21 @@ const EmbeddableWidget = () => {
   const [botId, setBotId] = useState<string | undefined>(undefined);
   
   useEffect(() => {
+    // Find the script tag by looking for widget.js in the src attribute
+    const findScriptTag = () => {
+      const scripts = document.querySelectorAll('script');
+      for (let i = 0; i < scripts.length; i++) {
+        const script = scripts[i];
+        const src = script.getAttribute('src') || '';
+        if (src.includes('widget.js')) {
+          return script;
+        }
+      }
+      return null;
+    };
+    
     // Extract the botId from the script tag's data attribute
-    const scriptTag = document.currentScript || 
-      document.querySelector('script[src*="widget.js"]') || 
-      document.querySelector('script[src*="embedWidget"]');
+    const scriptTag = findScriptTag();
     
     if (scriptTag) {
       const dataBot = scriptTag.getAttribute('data-bot-id');
@@ -21,7 +32,7 @@ const EmbeddableWidget = () => {
         console.error('No bot ID found in script tag');
       }
     } else {
-      console.error('Could not find script tag');
+      console.error('Could not find script tag with widget.js');
     }
   }, []);
   
@@ -39,6 +50,12 @@ const EmbeddableWidget = () => {
 
 // Create a function to inject and initialize the widget
 function injectChatWidget() {
+  // Check if widget container already exists to prevent duplicates
+  if (document.getElementById('support-bot-widget-container')) {
+    console.log('Widget container already exists');
+    return;
+  }
+  
   // Create widget container
   const widgetContainer = document.createElement('div');
   widgetContainer.id = 'support-bot-widget-container';
@@ -55,8 +72,8 @@ function injectChatWidget() {
 }
 
 // Make sure the DOM is fully loaded before injecting
-if (document.readyState === 'complete') {
-  injectChatWidget();
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(injectChatWidget, 100); // Short delay to ensure DOM is ready
 } else {
   window.addEventListener('load', injectChatWidget);
 }
