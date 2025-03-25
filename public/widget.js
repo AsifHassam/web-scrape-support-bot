@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -184,30 +183,29 @@
     }
     
     try {
-      // Define API URL with cache-busting parameter and proper URL encoding
+      // Define API URL with cache-busting parameter
       const timestamp = new Date().getTime();
       const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
       
-      // Make the fetch request with explicit headers for JSON
+      // Make the fetch request with explicit JSON headers
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        },
-        cache: 'no-store'
+          'Cache-Control': 'no-cache'
+        }
       });
       
       console.log('Bot config response status:', response.status);
       console.log('Bot config response headers:', {
-        contentType: response.headers.get('content-type'),
+        contentType: response.headers.get('content-type')
       });
       
       // Check if response is ok
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to load bot configuration. Status:', response.status, 'Response:', errorText.substring(0, 200) + '...');
+        console.error(`Failed to load bot configuration. Status: ${response.status}, Response:`, errorText);
         return;
       }
       
@@ -216,55 +214,68 @@
       if (!contentType || !contentType.includes('application/json')) {
         console.error('Invalid content type received:', contentType);
         const rawText = await response.text();
-        console.error('Raw response text received:', rawText.substring(0, 200) + '...');
+        console.error('Raw response text:', rawText);
         
-        if (rawText.trim().startsWith('<!DOCTYPE') || rawText.trim().startsWith('<html')) {
-          console.error('Received HTML instead of JSON. This indicates a server error or routing issue.');
+        // Try to parse as JSON anyway if it looks like JSON
+        if (rawText.trim().startsWith('{') && rawText.trim().endsWith('}')) {
+          try {
+            const parsedData = JSON.parse(rawText);
+            console.log('Successfully parsed JSON despite content type issues:', parsedData);
+            processConfigData(parsedData);
+            return;
+          } catch (parseErr) {
+            console.error('Failed to parse response as JSON:', parseErr);
+          }
         }
         
         console.log('Using default bot info due to content type error');
         return;
       }
       
-      // Get the response as JSON directly
+      // Get the response as JSON
       const data = await response.json();
       console.log('Successfully parsed bot config data:', data);
+      processConfigData(data);
       
-      if (data && data.bot) {
-        botInfo = {
-          name: data.bot.name || 'Support Bot',
-          company: data.bot.company || 'Your Company',
-          primaryColor: data.bot.primary_color || '#3b82f6'
-        };
-        
-        // Set CSS variable for the primary color
-        document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
-        
-        // If the welcome message hasn't been set yet, add it
-        if (messages.length === 0) {
-          messages.push({
-            role: 'bot',
-            content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
-          });
-        }
-        
-        // Update UI if panel is open
-        if (panel) {
-          const nameElement = panel.querySelector('.bot-name');
-          const companyElement = panel.querySelector('.company-name');
-          
-          if (nameElement) nameElement.textContent = botInfo.name;
-          if (companyElement) companyElement.textContent = botInfo.company;
-          
-          // Re-render messages to apply any primary color changes
-          renderMessages();
-        }
-      } else {
-        console.error('Bot data not found in API response:', data);
-      }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
       console.log('Using default bot info due to fetch error');
+    }
+  }
+  
+  // Process the config data separately to handle different response formats
+  function processConfigData(data) {
+    if (data && data.bot) {
+      botInfo = {
+        name: data.bot.name || 'Support Bot',
+        company: data.bot.company || 'Your Company',
+        primaryColor: data.bot.primary_color || '#3b82f6'
+      };
+      
+      // Set CSS variable for the primary color
+      document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
+      
+      // If the welcome message hasn't been set yet, add it
+      if (messages.length === 0) {
+        messages.push({
+          role: 'bot',
+          content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
+        });
+      }
+      
+      // Update UI if panel is open
+      if (panel) {
+        const nameElement = panel.querySelector('.bot-name');
+        const companyElement = panel.querySelector('.company-name');
+        
+        if (nameElement) nameElement.textContent = botInfo.name;
+        if (companyElement) companyElement.textContent = botInfo.company;
+        
+        // Re-render messages to apply any primary color changes
+        renderMessages();
+      }
+    } else {
+      console.error('Bot data not found in API response:', data);
     }
   }
 
@@ -478,3 +489,4 @@
   console.log('Widget script URL:', scriptTag ? scriptTag.getAttribute('src') : 'Unknown');
   console.log('Host page URL:', window.location.href);
 })();
+
