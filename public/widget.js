@@ -175,7 +175,7 @@
     primaryColor: '#3b82f6'
   };
 
-  // Function to fetch bot configuration from the server
+  // Function to fetch bot configuration from the Supabase Edge Function
   async function fetchBotConfig() {
     if (!botId) {
       console.error('No bot ID found, cannot fetch configuration');
@@ -183,9 +183,9 @@
     }
     
     try {
-      // Define API URL with cache-busting parameter
+      // Define API URL with cache-busting parameter using the Supabase Edge Function
       const timestamp = new Date().getTime();
-      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
+      const apiUrl = `https://mgtycpcnobkbfolkhobk.supabase.co/functions/v1/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
       
       // Make the fetch request with explicit JSON headers
@@ -204,78 +204,50 @@
       
       // Check if response is ok
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Failed to load bot configuration. Status: ${response.status}, Response:`, errorText);
+        const errorData = await response.json();
+        console.error(`Failed to load bot configuration. Status: ${response.status}, Response:`, errorData);
         return;
       }
       
-      // Validate content type
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Invalid content type received:', contentType);
-        const rawText = await response.text();
-        console.error('Raw response text:', rawText);
-        
-        // Try to parse as JSON anyway if it looks like JSON
-        if (rawText.trim().startsWith('{') && rawText.trim().endsWith('}')) {
-          try {
-            const parsedData = JSON.parse(rawText);
-            console.log('Successfully parsed JSON despite content type issues:', parsedData);
-            processConfigData(parsedData);
-            return;
-          } catch (parseErr) {
-            console.error('Failed to parse response as JSON:', parseErr);
-          }
-        }
-        
-        console.log('Using default bot info due to content type error');
-        return;
-      }
-      
-      // Get the response as JSON
+      // Parse the JSON response
       const data = await response.json();
       console.log('Successfully parsed bot config data:', data);
-      processConfigData(data);
       
+      if (data && data.bot) {
+        botInfo = {
+          name: data.bot.name || 'Support Bot',
+          company: data.bot.company || 'Your Company',
+          primaryColor: data.bot.primary_color || '#3b82f6'
+        };
+        
+        // Set CSS variable for the primary color
+        document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
+        
+        // If the welcome message hasn't been set yet, add it
+        if (messages.length === 0) {
+          messages.push({
+            role: 'bot',
+            content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
+          });
+        }
+        
+        // Update UI if panel is open
+        if (panel) {
+          const nameElement = panel.querySelector('.bot-name');
+          const companyElement = panel.querySelector('.company-name');
+          
+          if (nameElement) nameElement.textContent = botInfo.name;
+          if (companyElement) companyElement.textContent = botInfo.company;
+          
+          // Re-render messages to apply any primary color changes
+          renderMessages();
+        }
+      } else {
+        console.error('Bot data not found in API response:', data);
+      }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
       console.log('Using default bot info due to fetch error');
-    }
-  }
-  
-  // Process the config data separately to handle different response formats
-  function processConfigData(data) {
-    if (data && data.bot) {
-      botInfo = {
-        name: data.bot.name || 'Support Bot',
-        company: data.bot.company || 'Your Company',
-        primaryColor: data.bot.primary_color || '#3b82f6'
-      };
-      
-      // Set CSS variable for the primary color
-      document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
-      
-      // If the welcome message hasn't been set yet, add it
-      if (messages.length === 0) {
-        messages.push({
-          role: 'bot',
-          content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
-        });
-      }
-      
-      // Update UI if panel is open
-      if (panel) {
-        const nameElement = panel.querySelector('.bot-name');
-        const companyElement = panel.querySelector('.company-name');
-        
-        if (nameElement) nameElement.textContent = botInfo.name;
-        if (companyElement) companyElement.textContent = botInfo.company;
-        
-        // Re-render messages to apply any primary color changes
-        renderMessages();
-      }
-    } else {
-      console.error('Bot data not found in API response:', data);
     }
   }
 
