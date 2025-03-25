@@ -78,7 +78,8 @@ const ScrapedSite = () => {
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-full mt-4">
-              <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData()} />
+              {/* Cast the knowledge data to any to resolve the type mismatch issue */}
+              <KnowledgeBase scrapeResult={chatbotService.getKnowledgeData() as any} />
             </ScrollArea>
           </DialogContent>
         </Dialog>
