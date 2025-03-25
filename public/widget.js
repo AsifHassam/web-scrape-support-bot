@@ -256,9 +256,9 @@
       // Define allowed domains with their production URLs
       const productionUrl = 'https://web-scrape-support-bot.lovable.app';
       const allowedDomains = {
-        'localhost:8000': productionUrl,
-        '127.0.0.1:5500': productionUrl,
-        'localhost:8080': productionUrl
+        'localhost:8000': window.location.origin,
+        '127.0.0.1:5500': window.location.origin,
+        'localhost:8080': window.location.origin
       };
       
       // Check current hostname and port
@@ -290,19 +290,15 @@
           'Accept': 'application/json',
           'Origin': window.location.origin
         },
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'same-origin'
       })
         .then(response => {
           console.log('API response received:', response);
           if (!response.ok) {
-            throw new Error(`API responded with status ${response.status}`);
+            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
           }
           return response.json();
-        })
-        .catch((error) => {
-          // Fallback response if API call fails
-          console.error('API call failed:', error);
-          return { response: "I'm having trouble connecting to my knowledge base right now. Please try again later." };
         })
         .then(data => {
           console.log('API response data:', data);
@@ -316,6 +312,28 @@
             content: data.response || "Thanks for your message! I'll get back to you soon."
           });
           renderMessages();
+        })
+        .catch((error) => {
+          // Log the detailed error
+          console.error('API call failed:', error);
+          
+          // Remove typing indicator
+          const indicator = document.getElementById('typing-indicator');
+          if (indicator) indicator.remove();
+          
+          // Add fallback response
+          messages.push({
+            role: 'bot',
+            content: "I'm having trouble connecting to my knowledge base right now. Please try again later."
+          });
+          renderMessages();
+          
+          // Try to get the raw response for debugging
+          if (error.response) {
+            error.response.text().then(text => {
+              console.error('Raw error response:', text);
+            }).catch(e => console.error('Could not get raw error text:', e));
+          }
         });
     }, 1000);
   }

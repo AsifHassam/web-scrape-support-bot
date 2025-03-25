@@ -20,26 +20,40 @@ if (typeof window !== 'undefined') {
     const url = input instanceof Request ? input.url : input.toString();
     
     if (url.includes('/api/chat')) {
+      console.log('Intercepting API call to:', url);
+      
       // Extract query parameters
       const urlObj = new URL(url);
       const botId = urlObj.searchParams.get('botId');
       const message = urlObj.searchParams.get('message');
       
       if (!botId || !message) {
+        console.error('Missing parameters in API call:', { botId, message });
         return new Response(JSON.stringify({ 
           error: 'Missing required parameters: botId and message are required' 
         }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
       try {
         // Use the chatbot service
+        console.log('Processing message with chatbot service:', message);
         const response = await chatbotService.sendMessage(message);
+        console.log('Chatbot service response:', response);
+        
         return new Response(JSON.stringify({ response: response.content }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
         });
       } catch (error) {
         console.error('Error generating response:', error);
@@ -48,7 +62,10 @@ if (typeof window !== 'undefined') {
           details: error.message 
         }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
     }
