@@ -3,61 +3,96 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { useScrapeWebsite } from '@/hooks/useScrapeWebsite';
-import { normalizeUrl, isValidUrl } from '@/utils/urlUtils';
+import { Globe } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import useScrapeWebsite from '@/hooks/useScrapeWebsite';
+import ScrapeStatus from '@/components/ScrapeStatus';
+import { chatbotService } from '@/utils/chatbot';
 
 const UrlForm = () => {
   const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { scrapeProgress, startScraping } = useScrapeWebsite();
   const navigate = useNavigate();
-  const { startScraping } = useScrapeWebsite(); 
-
-  const handleScrape = async (e: React.FormEvent) => {
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!url.trim()) {
-      toast.error('Please enter a URL');
+      toast({
+        title: 'Please enter a URL',
+        variant: 'destructive',
+      });
       return;
     }
     
-    const normalizedUrl = normalizeUrl(url);
-    
-    if (!isValidUrl(normalizedUrl)) {
-      toast.error('Please enter a valid URL');
-      return;
-    }
-    
-    setLoading(true);
+    setIsSubmitting(true);
     
     try {
-      await startScraping(normalizedUrl);
-      navigate('/scraped-site');
+      // Start the scraping process
+      await startScraping(url);
+      
+      // Once scraping is complete, update the chatbot's knowledge base
+      if (scrapeProgress.content) {
+        const knowledge = scrapeProgress.content.map(item => 
+          `${item.title} - ${item.url}\n${item.content}`
+        );
+        chatbotService.updateKnowledgeBase(knowledge, url);
+        
+        // Navigate to the scraped site view
+        navigate('/scraped-site', { state: { url } });
+      }
     } catch (error) {
-      console.error('Scraping error:', error);
-      toast.error('Failed to scrape website. Please try again.');
+      console.error('Error scraping website:', error);
+      toast({
+        title: 'Error scraping website',
+        description: 'Please try again with a valid URL',
+        variant: 'destructive',
+      });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
-
+  
+  const isUrl = (value: string) => {
+    try {
+      new URL(value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+  
   return (
-    <form onSubmit={handleScrape} className="w-full max-w-lg">
-      <div className="flex gap-2">
-        <div className="flex-1">
+    <div className="w-full max-w-2xl space-y-4">
+      <form onSubmit={handleSubmit} className="flex w-full space-x-2">
+        <div className="relative flex-grow">
           <Input
             type="text"
-            placeholder="Enter your website URL (e.g. example.com)"
+            placeholder="Enter website URL (e.g., example.com)"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full h-12 text-base"
+            className="pr-10 h-12 text-base"
+            disabled={isSubmitting}
           />
+          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+            <Globe className="h-5 w-5 text-gray-400" />
+          </div>
         </div>
-        <Button type="submit" disabled={loading} className="h-12 px-6">
-          {loading ? 'Processing...' : 'Extract Knowledge'}
+        
+        <Button 
+          type="submit" 
+          className="h-12 px-6"
+          disabled={isSubmitting || !isUrl(url)}
+        >
+          {isSubmitting ? 'Processing...' : 'Analyze'}
         </Button>
-      </div>
-    </form>
+      </form>
+      
+      {(scrapeProgress.status !== 'idle') && (
+        <ScrapeStatus progress={scrapeProgress} />
+      )}
+    </div>
   );
 };
 
