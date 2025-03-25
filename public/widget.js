@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -250,9 +249,8 @@
     renderMessages();
     
     setTimeout(() => {
-      // Use relative URL for API calls to avoid CORS issues
-      // This will make the request go to the same origin as the widget
-      const apiUrl = `/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
+      // Use the correct absolute URL to the deployed API
+      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
       // Show typing indicator
