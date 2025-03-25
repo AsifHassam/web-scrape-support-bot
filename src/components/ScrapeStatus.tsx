@@ -85,12 +85,12 @@ export const ScrapeStatus = ({ progress }: ScrapeStatusProps) => {
         </div>
       )}
       
-      {progress.status === 'complete' && progress.results.length > 0 && (
+      {progress.status === 'complete' && progress.content && progress.content.length > 0 && (
         <div className="mt-4 space-y-4">
           <h3 className="text-lg font-medium">Scraped Pages</h3>
           <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
             <ul className="divide-y divide-gray-200">
-              {progress.results.map((result, index) => (
+              {progress.content.map((result, index) => (
                 <li key={index} className="p-3 text-sm hover:bg-gray-50 transition-colors">
                   <p className="font-medium text-gray-900 truncate">{result.title}</p>
                   <p className="text-gray-500 truncate text-xs">{result.url}</p>

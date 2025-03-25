@@ -21,7 +21,8 @@ export const useScrapeWebsite = () => {
         websiteUrl: normalizedUrl,
         progress: 0.1,
         totalUrls: 1,
-        processedUrls: 0
+        processedUrls: 0,
+        results: []
       }));
       
       // Simulate scraping with incremental progress updates
@@ -32,26 +33,30 @@ export const useScrapeWebsite = () => {
           ...prev,
           progress: Math.min(0.1 + (i * 0.09), 1),
           processedUrls: Math.floor(i * 0.7),
-          totalUrls: 7
+          totalUrls: 7,
+          results: []
         }));
       }
       
       // Indicate scraping is complete
+      const scrapedContent = [
+        { title: 'Homepage', content: 'Extracted homepage content...', url: `${normalizedUrl}` },
+        { title: 'About Us', content: 'Extracted about us content...', url: `${normalizedUrl}/about` },
+        { title: 'Products', content: 'Extracted products content...', url: `${normalizedUrl}/products` },
+        { title: 'Services', content: 'Extracted services content...', url: `${normalizedUrl}/services` },
+        { title: 'FAQ', content: 'Extracted FAQ content...', url: `${normalizedUrl}/faq` },
+        { title: 'Contact', content: 'Extracted contact content...', url: `${normalizedUrl}/contact` },
+        { title: 'Blog', content: 'Extracted blog content...', url: `${normalizedUrl}/blog` },
+      ];
+      
       setScrapeProgress(prev => ({
         ...prev,
         status: 'complete',
         progress: 1,
         processedUrls: 7,
         totalUrls: 7,
-        content: [
-          { title: 'Homepage', content: 'Extracted homepage content...', url: `${normalizedUrl}` },
-          { title: 'About Us', content: 'Extracted about us content...', url: `${normalizedUrl}/about` },
-          { title: 'Products', content: 'Extracted products content...', url: `${normalizedUrl}/products` },
-          { title: 'Services', content: 'Extracted services content...', url: `${normalizedUrl}/services` },
-          { title: 'FAQ', content: 'Extracted FAQ content...', url: `${normalizedUrl}/faq` },
-          { title: 'Contact', content: 'Extracted contact content...', url: `${normalizedUrl}/contact` },
-          { title: 'Blog', content: 'Extracted blog content...', url: `${normalizedUrl}/blog` },
-        ]
+        content: scrapedContent,
+        results: scrapedContent
       }));
       
     } catch (error) {
@@ -59,7 +64,8 @@ export const useScrapeWebsite = () => {
       setScrapeProgress(prev => ({
         ...prev,
         status: 'error',
-        error: 'Failed to scrape website'
+        error: 'Failed to scrape website',
+        results: []
       }));
       throw error;
     }
