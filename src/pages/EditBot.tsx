@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Code, Palette } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BotAnalytics from "@/components/BotAnalytics";
 import KnowledgeBaseManager from "@/components/KnowledgeBaseManager";
@@ -12,12 +12,16 @@ import { toast } from "@/components/ui/use-toast";
 import { chatbotService } from "@/utils/chatbot";
 import { scrapeWebsite } from "@/utils/scraper";
 import { generateEmbedCode } from "@/utils/generateEmbedCode";
-import { Code } from "lucide-react";
+import ChatbotEmulator from "@/components/ChatbotEmulator";
+import ChatbotStylingForm from "@/components/ChatbotStylingForm";
 
 const EditBot = () => {
   const [bot, setBot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [knowledgeBaseData, setKnowledgeBaseData] = useState<any>(null);
+  const [botColor, setBotColor] = useState("#3b82f6"); // Default color
+  const [botName, setBotName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -34,6 +38,9 @@ const EditBot = () => {
           
         if (error) throw error;
         setBot(data);
+        setBotName(data.name || "AI Assistant");
+        setCompanyName(data.company_name || "Your Company");
+        setBotColor(data.primary_color || "#3b82f6");
       } catch (error: any) {
         console.error("Error fetching bot:", error);
         toast({
@@ -121,6 +128,40 @@ const EditBot = () => {
           variant: "destructive",
         });
       });
+  };
+
+  const handleSaveStyle = async (values: any) => {
+    if (!id) return;
+
+    try {
+      const { error } = await supabase
+        .from("bots")
+        .update({
+          name: values.botName,
+          company_name: values.companyName,
+          primary_color: values.primaryColor,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setBotName(values.botName);
+      setCompanyName(values.companyName);
+      setBotColor(values.primaryColor);
+
+      toast({
+        title: "Styles updated",
+        description: "Your chatbot styling has been saved successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error updating bot style:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update chatbot styling",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -236,11 +277,32 @@ const EditBot = () => {
               </TabsContent>
               
               <TabsContent value="styling">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold mb-4">Styling Options</h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Styling options will appear here.
-                  </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                    <div className="flex items-center mb-4">
+                      <Palette className="h-5 w-5 mr-2 text-primary" />
+                      <h2 className="text-xl font-semibold">Customize Appearance</h2>
+                    </div>
+                    
+                    <ChatbotStylingForm 
+                      initialValues={{
+                        botName,
+                        companyName,
+                        primaryColor: botColor
+                      }}
+                      onSave={handleSaveStyle}
+                    />
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Preview</h3>
+                    <ChatbotEmulator 
+                      botName={botName} 
+                      companyName={companyName} 
+                      knowledge={knowledgeBaseData || { status: 'complete', results: [] }}
+                      primaryColor={botColor}
+                    />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>

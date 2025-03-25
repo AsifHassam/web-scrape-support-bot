@@ -15,7 +15,7 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background-color: #3b82f6;
+      background-color: var(--chat-primary-color, #3b82f6);
       color: white;
       display: flex;
       align-items: center;
@@ -45,6 +45,8 @@
     
     .chat-widget-header {
       padding: 16px;
+      background-color: var(--chat-primary-color, #3b82f6);
+      color: white;
       border-bottom: 1px solid #f1f1f1;
       display: flex;
       align-items: center;
@@ -73,7 +75,7 @@
     }
     
     .user-message {
-      background-color: #3b82f6;
+      background-color: var(--chat-primary-color, #3b82f6);
       color: white;
       align-self: flex-end;
       border-bottom-right-radius: 4px;
@@ -100,7 +102,7 @@
     }
 
     .chat-send-button {
-      background-color: #3b82f6;
+      background-color: var(--chat-primary-color, #3b82f6);
       color: white;
       border: none;
       border-radius: 50%;
@@ -151,12 +153,57 @@
   // Track widget state
   let isOpen = false;
   let panel = null;
-  let messages = [
-    {
-      role: 'bot',
-      content: 'Hello! How can I help you today?'
+  let messages = [];
+  let botInfo = {
+    name: 'Support Bot',
+    company: 'Your Company',
+    primaryColor: '#3b82f6'
+  };
+
+  // Function to fetch bot configuration from the server
+  async function fetchBotConfig() {
+    try {
+      const response = await fetch(`https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.bot) {
+          botInfo = {
+            name: data.bot.name || 'Support Bot',
+            company: data.bot.company_name || 'Your Company',
+            primaryColor: data.bot.primary_color || '#3b82f6'
+          };
+          
+          // Set CSS variable for the primary color
+          document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
+          
+          // If the welcome message hasn't been set yet, add it
+          if (messages.length === 0) {
+            messages.push({
+              role: 'bot',
+              content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
+            });
+          }
+          
+          // Update UI if panel is open
+          if (panel) {
+            const nameElement = panel.querySelector('.bot-name');
+            const companyElement = panel.querySelector('.company-name');
+            
+            if (nameElement) nameElement.textContent = botInfo.name;
+            if (companyElement) companyElement.textContent = botInfo.company;
+            
+            // Re-render messages to apply any primary color changes
+            renderMessages();
+          }
+        }
+      } else {
+        console.error('Failed to load bot configuration:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching bot configuration:', error);
     }
-  ];
+  }
 
   // Function to create the chat panel
   function createChatPanel() {
@@ -168,10 +215,13 @@
     header.className = 'chat-widget-header';
     header.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div style="width: 32px; height: 32px; background-color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 32px; height: 32px; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </div>
-        <span style="font-weight: 500;">Support Bot</span>
+        <div>
+          <span class="bot-name" style="font-weight: 500;">${botInfo.name}</span>
+          <div class="company-name" style="font-size: 12px; opacity: 0.8;">${botInfo.company}</div>
+        </div>
       </div>
       <div style="cursor: pointer;" id="chat-widget-close">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -220,6 +270,14 @@
     if (!body) return;
     
     body.innerHTML = '';
+    
+    if (messages.length === 0) {
+      // Add default welcome message if no messages exist
+      messages.push({
+        role: 'bot',
+        content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
+      });
+    }
     
     messages.forEach(message => {
       const messageEl = document.createElement('div');
@@ -339,6 +397,9 @@
 
   // Add click event to the button
   button.addEventListener('click', toggleWidget);
+  
+  // Fetch bot configuration on initialization
+  fetchBotConfig();
   
   // Debug information
   console.log('Chat widget initialized with bot ID:', botId);

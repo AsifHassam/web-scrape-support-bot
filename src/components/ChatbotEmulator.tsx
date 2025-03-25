@@ -10,12 +10,14 @@ interface ChatbotEmulatorProps {
   botName: string;
   companyName: string;
   knowledge: ScrapeProgress;
+  primaryColor?: string;
 }
 
 const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
   botName,
   companyName,
   knowledge,
+  primaryColor = "#3b82f6",
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -29,6 +31,18 @@ const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Update welcome message when bot name or company changes
+  useEffect(() => {
+    setMessages([
+      {
+        id: "welcome",
+        role: "bot",
+        content: `Hi there! I'm ${botName || "Assistant"}, a chatbot for ${companyName || "this company"}. How can I help you today?`,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [botName, companyName]);
 
   // Update knowledge base when it changes
   useEffect(() => {
@@ -92,12 +106,42 @@ const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
     }
   };
 
+  // Convert hex to RGB for background opacity
+  const hexToRgb = (hex: string) => {
+    // Remove the # if present
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return { r, g, b };
+  };
+
+  const headerStyle = {
+    backgroundColor: primaryColor,
+  };
+
+  const buttonStyle = {
+    backgroundColor: primaryColor,
+  };
+
+  const userMessageStyle = {
+    backgroundColor: primaryColor,
+  };
+
+  const rgbColor = hexToRgb(primaryColor);
+  const lightBgStyle = {
+    backgroundColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.1)`,
+  };
+
   return (
     <div className="relative max-w-md mx-auto">
       {/* Chat header and container */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 h-[500px] flex flex-col">
         {/* Chat header */}
-        <div className="bg-primary text-white p-4 flex justify-between items-center">
+        <div className="text-white p-4 flex justify-between items-center" style={headerStyle}>
           <div className="flex items-center">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
               <MessageSquare className="h-4 w-4" />
@@ -127,9 +171,10 @@ const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
               <div
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
                   message.role === "user"
-                    ? "bg-primary text-white rounded-br-none"
+                    ? "text-white rounded-br-none"
                     : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none"
                 }`}
+                style={message.role === "user" ? userMessageStyle : undefined}
               >
                 <p className="text-sm">{message.content}</p>
               </div>
@@ -159,7 +204,7 @@ const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
               className="flex-1 mr-2"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading}>
+            <Button type="submit" size="icon" disabled={isLoading} style={buttonStyle}>
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -170,7 +215,8 @@ const ChatbotEmulator: React.FC<ChatbotEmulatorProps> = ({
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+          style={buttonStyle}
         >
           <MessageSquare className="h-6 w-6" />
         </button>
