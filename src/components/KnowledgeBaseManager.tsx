@@ -7,11 +7,10 @@ import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { Globe, FileText, Plus, Trash2 } from "lucide-react";
+import { Globe, FileText, Plus, Trash2, Upload, File } from "lucide-react";
 
 interface KnowledgeSource {
   id: string;
@@ -29,11 +28,11 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingSource, setAddingSource] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   
   const form = useForm({
     defaultValues: {
-      sourceType: "text",
-      content: "",
+      sourceType: "file",
       url: "",
     }
   });
@@ -67,25 +66,61 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   
   const handleAddSource = async (values: any) => {
     try {
-      const sourceData = {
-        bot_id: botId,
-        source_type: values.sourceType,
-        content: values.sourceType === "text" ? values.content : values.url,
-      };
-      
-      const { error } = await supabase
-        .from("knowledge_sources")
-        .insert(sourceData);
+      if (values.sourceType === "file") {
+        if (selectedFiles.length === 0) {
+          toast({
+            title: "Error",
+            description: "Please select at least one file to upload",
+            variant: "destructive",
+          });
+          return;
+        }
         
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Knowledge source added successfully",
-      });
+        // Process each file
+        for (const file of selectedFiles) {
+          // Read file content
+          const fileContent = await readFileContent(file);
+          
+          // Store file content in database
+          const sourceData = {
+            bot_id: botId,
+            source_type: "file",
+            content: fileContent,
+          };
+          
+          const { error } = await supabase
+            .from("knowledge_sources")
+            .insert(sourceData);
+            
+          if (error) throw error;
+        }
+        
+        toast({
+          title: "Success",
+          description: `${selectedFiles.length} file(s) uploaded successfully`,
+        });
+      } else if (values.sourceType === "url") {
+        const sourceData = {
+          bot_id: botId,
+          source_type: "url",
+          content: values.url,
+        };
+        
+        const { error } = await supabase
+          .from("knowledge_sources")
+          .insert(sourceData);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Website URL added successfully",
+        });
+      }
       
       // Reset form and refresh
       form.reset();
+      setSelectedFiles([]);
       setAddingSource(false);
       fetchKnowledgeSources();
     } catch (error: any) {
@@ -129,9 +164,32 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
       case "url":
       case "website":
         return <Globe className="h-4 w-4" />;
+      case "file":
+        return <File className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+  
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
   };
   
   return (
@@ -177,6 +235,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                           <div className="font-medium">
                             {source.source_type === "text" ? "Text Input" : 
                              source.source_type === "url" ? "Website URL" :
+                             source.source_type === "file" ? "File Upload" :
                              source.source_type}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
@@ -212,30 +271,39 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                 <form onSubmit={form.handleSubmit(handleAddSource)} className="space-y-4">
                   <Tabs value={form.watch("sourceType")} onValueChange={(value) => form.setValue("sourceType", value)}>
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="text">Text</TabsTrigger>
+                      <TabsTrigger value="file">Upload Files</TabsTrigger>
                       <TabsTrigger value="url">Website URL</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="text" className="space-y-4 mt-4">
-                      <FormField
-                        control={form.control}
-                        name="content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Enter text knowledge..." 
-                                className="h-32"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Paste or type text content to add to your bot's knowledge
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
+                    <TabsContent value="file" className="space-y-4 mt-4">
+                      <FormItem>
+                        <FormLabel>Upload Files</FormLabel>
+                        <FormControl>
+                          <div className="grid w-full gap-2">
+                            <Input 
+                              id="files" 
+                              type="file" 
+                              multiple
+                              onChange={handleFileChange}
+                              className="cursor-pointer file:cursor-pointer"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Upload one or more text files (.txt, .md, .csv, etc.) to add to your bot's knowledge
+                        </FormDescription>
+                      </FormItem>
+                      
+                      {selectedFiles.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded border">
+                          <p className="text-sm font-medium mb-2">{selectedFiles.length} file(s) selected:</p>
+                          <ul className="text-xs text-gray-500 space-y-1">
+                            {selectedFiles.map((file, index) => (
+                              <li key={index} className="truncate">{file.name} ({(file.size / 1024).toFixed(1)} KB)</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </TabsContent>
                     
                     <TabsContent value="url" className="space-y-4 mt-4">
@@ -264,7 +332,10 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => setAddingSource(false)}
+                      onClick={() => {
+                        setAddingSource(false);
+                        setSelectedFiles([]);
+                      }}
                     >
                       Cancel
                     </Button>
