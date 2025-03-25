@@ -250,8 +250,9 @@
     renderMessages();
     
     setTimeout(() => {
-      // Direct API call to our backend - no proxy
-      const apiUrl = `https://web-scrape-support-bot.lovable.app/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
+      // Use relative URL for API calls to avoid CORS issues
+      // This will make the request go to the same origin as the widget
+      const apiUrl = `/api/chat?botId=${encodeURIComponent(botId)}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
       
       // Show typing indicator
@@ -266,8 +267,7 @@
         method: 'GET',
         headers: {
           'Accept': 'application/json'
-        },
-        mode: 'cors'
+        }
       })
         .then(response => {
           console.log('API response status:', response.status);
@@ -277,9 +277,17 @@
             throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
           }
           
+          const contentType = response.headers.get('content-type');
+          console.log('Content-Type header:', contentType);
+          
           // Return the text content first to see what we're getting
           return response.text().then(text => {
             console.log('Raw API response text:', text);
+            
+            // Only try to parse as JSON if it doesn't start with <!DOCTYPE or <html
+            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+              throw new Error('Received HTML instead of JSON response');
+            }
             
             // Try to parse as JSON, but handle if it's not valid JSON
             try {

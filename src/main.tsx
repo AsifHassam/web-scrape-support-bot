@@ -23,7 +23,7 @@ if (typeof window !== 'undefined') {
       console.log('Intercepting API call to:', url);
       
       // Extract query parameters
-      const urlObj = new URL(url);
+      const urlObj = new URL(url, window.location.origin);
       const botId = urlObj.searchParams.get('botId');
       const message = urlObj.searchParams.get('message');
       
