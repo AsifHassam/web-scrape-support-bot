@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -126,7 +125,7 @@
   // Get the bot ID from the script tag
   let scriptTag = document.currentScript;
   if (!scriptTag) {
-    scriptTag = document.querySelector('script[src*="widget-script.js"]');
+    scriptTag = document.querySelector('script[src*="widget.js"]');
   }
   
   let botId = '';
@@ -251,11 +250,8 @@
     
     // Simulate API call to get bot response
     setTimeout(() => {
-      // This would be replaced with a real API call to your backend
-      // using the botId to get the response
-      const baseUrl = window.location.origin.includes('localhost') ? 
-        'https://web-scrape-support-bot.lovable.app' : 
-        window.location.origin;
+      // Always use the deployed URL, not dynamically determined
+      const baseUrl = 'https://web-scrape-support-bot.lovable.app';
       
       const apiUrl = `${baseUrl}/api/chat?botId=${botId}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);

@@ -9,7 +9,6 @@ export const generateEmbedCode = (botId: string): string => {
   const deployedOrigin = "https://web-scrape-support-bot.lovable.app";
   
   // The script tag with the bot ID as a data attribute
-  // Note: Changed from widget-script.js to widget.js to match the actual file name
   return `<script 
   src="${deployedOrigin}/widget.js" 
   data-bot-id="${botId}" 

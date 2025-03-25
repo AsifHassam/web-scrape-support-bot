@@ -9,7 +9,7 @@ const EmbeddableWidget = () => {
   useEffect(() => {
     // Extract the botId from the script tag's data attribute
     const scriptTag = document.currentScript || 
-      document.querySelector('script[src*="widget-script.js"]') || 
+      document.querySelector('script[src*="widget.js"]') || 
       document.querySelector('script[src*="embedWidget"]');
     
     if (scriptTag) {

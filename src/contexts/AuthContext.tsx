@@ -28,6 +28,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Configure Supabase auth with the correct redirect URL
+    supabase.auth.setSettings({
+      site_url: 'https://web-scrape-support-bot.lovable.app'
+    });
+
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
