@@ -29,6 +29,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   const [loading, setLoading] = useState(true);
   const [addingSource, setAddingSource] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   const form = useForm({
     defaultValues: {
@@ -77,28 +78,51 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
         }
         
         // Process each file
-        for (const file of selectedFiles) {
-          // Read file content
-          const fileContent = await readFileContent(file);
+        let successCount = 0;
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          setUploadProgress(Math.round((i / selectedFiles.length) * 100));
           
-          // Store file content in database
-          const sourceData = {
-            bot_id: botId,
-            source_type: "file",
-            content: fileContent,
-          };
-          
-          const { error } = await supabase
-            .from("knowledge_sources")
-            .insert(sourceData);
+          try {
+            // For text files, read as text
+            const fileContent = await readFileAsText(file);
             
-          if (error) throw error;
+            // Store file content in database
+            const sourceData = {
+              bot_id: botId,
+              source_type: "file",
+              content: fileContent,
+            };
+            
+            const { error } = await supabase
+              .from("knowledge_sources")
+              .insert(sourceData);
+              
+            if (error) {
+              console.error("Error uploading file:", file.name, error);
+              continue;
+            }
+            
+            successCount++;
+          } catch (fileError) {
+            console.error("Error processing file:", file.name, fileError);
+          }
         }
         
-        toast({
-          title: "Success",
-          description: `${selectedFiles.length} file(s) uploaded successfully`,
-        });
+        setUploadProgress(100);
+        
+        if (successCount > 0) {
+          toast({
+            title: "Success",
+            description: `${successCount} of ${selectedFiles.length} file(s) uploaded successfully`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to upload any files",
+            variant: "destructive",
+          });
+        }
       } else if (values.sourceType === "url") {
         const sourceData = {
           bot_id: botId,
@@ -122,6 +146,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
       form.reset();
       setSelectedFiles([]);
       setAddingSource(false);
+      setUploadProgress(0);
       fetchKnowledgeSources();
     } catch (error: any) {
       console.error("Error adding knowledge source:", error);
@@ -177,18 +202,46 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
     }
   };
   
-  const readFileContent = (file: File): Promise<string> => {
+  const readFileAsText = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      
       reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error("Failed to read file"));
+        try {
+          if (event.target?.result) {
+            // Convert ArrayBuffer to string for text files
+            if (file.type.includes('text') || 
+                file.name.endsWith('.txt') || 
+                file.name.endsWith('.md') || 
+                file.name.endsWith('.csv')) {
+              const text = event.target.result instanceof ArrayBuffer
+                ? new TextDecoder().decode(event.target.result)
+                : event.target.result as string;
+              resolve(text);
+            } else {
+              // For non-text files, just use the filename and type as content
+              resolve(`File: ${file.name} (${file.type || 'unknown type'})`);
+            }
+          } else {
+            reject(new Error("Failed to read file content"));
+          }
+        } catch (error) {
+          reject(new Error(`Error processing file: ${error}`));
         }
       };
+      
       reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsText(file);
+      
+      // Read as text for text files
+      if (file.type.includes('text') || 
+          file.name.endsWith('.txt') || 
+          file.name.endsWith('.md') || 
+          file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        // For other files, read as text but handle differently
+        reader.readAsText(file);
+      }
     });
   };
   
@@ -284,13 +337,14 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                               id="files" 
                               type="file" 
                               multiple
+                              accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
                               onChange={handleFileChange}
                               className="cursor-pointer file:cursor-pointer"
                             />
                           </div>
                         </FormControl>
                         <FormDescription>
-                          Upload one or more text files (.txt, .md, .csv, etc.) to add to your bot's knowledge
+                          Upload one or more text files (.txt, .md, .csv) to add to your bot's knowledge
                         </FormDescription>
                       </FormItem>
                       
@@ -302,6 +356,15 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                               <li key={index} className="truncate">{file.name} ({(file.size / 1024).toFixed(1)} KB)</li>
                             ))}
                           </ul>
+                        </div>
+                      )}
+                      
+                      {uploadProgress > 0 && (
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                          <div 
+                            className="bg-primary h-2.5 rounded-full" 
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
                         </div>
                       )}
                     </TabsContent>
@@ -335,6 +398,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
                       onClick={() => {
                         setAddingSource(false);
                         setSelectedFiles([]);
+                        setUploadProgress(0);
                       }}
                     >
                       Cancel

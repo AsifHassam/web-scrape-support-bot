@@ -64,13 +64,14 @@ const EditBot = () => {
           // Process knowledge sources for display
           const knowledgeEntries = data.map(source => source.content);
           
-          // Create a mock scrape result for the KnowledgeBase component
-          const mockScrapeResult = {
+          // Create a result for the KnowledgeBase component
+          const knowledgeResult = {
             status: 'complete',
             results: data.map(source => ({
-              url: source.source_type === 'url' ? source.content : 'file-upload',
+              url: source.source_type === 'url' ? source.content : 
+                   source.source_type === 'file' ? `file-${source.id}` : 'knowledge-entry',
               title: source.source_type === 'url' ? new URL(source.content).hostname : 
-                    source.source_type === 'file' ? 'File Upload' : 'Knowledge Entry',
+                    source.source_type === 'file' ? `File: ${source.content.substring(0, 20)}...` : 'Knowledge Entry',
               content: source.content.substring(0, 1000) + (source.content.length > 1000 ? '...' : '')
             }))
           };
@@ -79,7 +80,7 @@ const EditBot = () => {
           chatbotService.updateKnowledgeBase(knowledgeEntries);
           
           // Set the knowledge base data for display
-          setKnowledgeBaseData(mockScrapeResult);
+          setKnowledgeBaseData(knowledgeResult);
         } else {
           // If no knowledge sources, set empty knowledge base
           setKnowledgeBaseData({
@@ -89,6 +90,10 @@ const EditBot = () => {
         }
       } catch (error: any) {
         console.error("Error processing knowledge sources:", error);
+        setKnowledgeBaseData({
+          status: 'error',
+          results: []
+        });
       }
     };
     
@@ -148,9 +153,18 @@ const EditBot = () => {
               <TabsContent value="knowledge" className="space-y-6">
                 <KnowledgeBaseManager botId={id!} />
                 
-                {knowledgeBaseData && (
+                {knowledgeBaseData && knowledgeBaseData.results.length > 0 ? (
                   <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-4">Current Knowledge Sources</h2>
                     <KnowledgeBase scrapeResult={knowledgeBaseData} />
+                  </div>
+                ) : (
+                  <div className="mt-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                    <h2 className="text-xl font-semibold mb-2">No Knowledge Sources</h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Your bot doesn't have any knowledge sources yet. Add some files or website URLs above
+                      to train your chatbot with specific information.
+                    </p>
                   </div>
                 )}
               </TabsContent>
