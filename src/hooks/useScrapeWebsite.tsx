@@ -17,7 +17,7 @@ export const useScrapeWebsite = () => {
       // Update status to indicate scraping has started
       setScrapeProgress(prev => ({ 
         ...prev, 
-        status: 'in_progress' as ScrapeStatus,
+        status: 'in_progress',
         websiteUrl: normalizedUrl,
         progress: 0.1,
         totalUrls: 1,

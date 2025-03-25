@@ -1,10 +1,11 @@
+
 export interface ScrapeResult {
   url: string;
   title: string;
   content: string;
-  links: string[];
-  timestamp: string;
-  status: 'success' | 'error';
+  links?: string[];
+  timestamp?: string;
+  status?: 'success' | 'error';
   message?: string;
 }
 
@@ -12,9 +13,11 @@ export interface ScrapeProgress {
   totalUrls: number;
   processedUrls: number;
   progress: number;
-  status: 'idle' | 'scanning' | 'processing' | 'complete' | 'error';
+  status: ScrapeStatus;
   results: ScrapeResult[];
   error?: string;
+  websiteUrl?: string;
+  content?: ScrapeResult[];
 }
 
 export type ScrapeStatus = 'idle' | 'in_progress' | 'scanning' | 'processing' | 'complete' | 'error';

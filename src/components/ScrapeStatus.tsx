@@ -17,6 +17,7 @@ export const ScrapeStatus = ({ progress }: ScrapeStatusProps) => {
         return <AlertCircle className="h-5 w-5 text-red-500" />;
       case 'processing':
       case 'scanning':
+      case 'in_progress':
         return <Loader2 className="h-5 w-5 text-primary animate-spin" />;
       case 'idle':
       default:
@@ -34,6 +35,8 @@ export const ScrapeStatus = ({ progress }: ScrapeStatusProps) => {
         return 'Processing pages...';
       case 'scanning':
         return 'Scanning website...';
+      case 'in_progress':
+        return 'Scraping in progress...';
       case 'idle':
       default:
         return 'Ready to begin';
@@ -50,6 +53,8 @@ export const ScrapeStatus = ({ progress }: ScrapeStatusProps) => {
         return `Processed ${progress.processedUrls} of ${progress.totalUrls} pages.`;
       case 'scanning':
         return 'Analyzing website structure and discovering pages...';
+      case 'in_progress':
+        return `Processed ${progress.processedUrls} of ${progress.totalUrls} pages.`;
       case 'idle':
       default:
         return 'Enter a URL to begin scraping.';
@@ -68,7 +73,7 @@ export const ScrapeStatus = ({ progress }: ScrapeStatusProps) => {
         </AlertDescription>
       </Alert>
       
-      {(progress.status === 'processing' || progress.status === 'scanning') && (
+      {(progress.status === 'processing' || progress.status === 'scanning' || progress.status === 'in_progress') && (
         <div className="space-y-2">
           <Progress 
             value={progress.status === 'scanning' ? undefined : progress.progress * 100} 
