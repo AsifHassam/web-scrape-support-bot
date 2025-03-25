@@ -77,6 +77,50 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          bot_id: string
+          created_at: string
+          customer_email: string | null
+          customer_location: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          customer_email?: string | null
+          customer_location?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_location?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           browser: string | null
@@ -147,6 +191,41 @@ export type Database = {
             columns: ["bot_id"]
             isOneToOne: false
             referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read: boolean | null
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read?: boolean | null
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read?: boolean | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]

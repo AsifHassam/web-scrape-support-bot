@@ -1,6 +1,5 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useConversations } from "@/hooks/useConversations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
@@ -25,127 +24,13 @@ interface ConversationListProps {
   selectedConversationId?: string;
 }
 
-// For demo purposes, create some sample conversations
-const generateMockConversations = (filter: string): Conversation[] => {
-  const baseConversations = [
-    {
-      id: "1",
-      customer_name: "Bright Mahlase",
-      last_message: "Thanks",
-      last_message_time: new Date(Date.now() - 10 * 60000).toISOString(),
-      status: 'human' as const,
-      unread: true,
-      customer_email: "mahalsebright@gmail.com",
-      customer_location: "Johannesburg"
-    },
-    {
-      id: "2",
-      customer_name: "S'mangaliso Ngo",
-      last_message: "Where you located",
-      last_message_time: new Date(Date.now() - 20 * 60000).toISOString(),
-      status: 'ai' as const,
-      unread: true,
-      customer_email: "smangaliso@example.com",
-      customer_location: "Durban"
-    },
-    {
-      id: "3",
-      customer_name: "Jeffrey Mzimba", 
-      last_message: "I've been trying to apply for the course",
-      last_message_time: new Date(Date.now() - 3 * 3600000).toISOString(),
-      status: 'ai' as const,
-      unread: false,
-      customer_email: "jeffrey@example.com", 
-      customer_location: "South Africa"
-    },
-    {
-      id: "4",
-      customer_name: "Aslam Seedat",
-      last_message: "How much is the full stack program?",
-      last_message_time: new Date(Date.now() - 5 * 3600000).toISOString(),
-      status: 'human' as const,
-      unread: false,
-      customer_email: "aslam@example.com",
-      customer_location: "Johannesburg"
-    },
-    {
-      id: "5",
-      customer_name: "Jonathan Jane",
-      last_message: "Currently working as an IT technician",
-      last_message_time: new Date(Date.now() - 8 * 3600000).toISOString(),
-      status: 'closed' as const,
-      unread: false,
-      customer_email: "jonathan@example.com",
-      customer_location: "Vanderkloof"
-    },
-  ];
-
-  switch (filter) {
-    case 'open':
-      return baseConversations.filter(conv => conv.status !== 'closed');
-    case 'my':
-      return baseConversations.filter(conv => conv.status === 'human');
-    case 'unassigned':
-      return baseConversations.filter(conv => conv.status === 'ai');
-    case 'closed':
-      return baseConversations.filter(conv => conv.status === 'closed');
-    default:
-      return baseConversations;
-  }
-};
-
 const ConversationList: React.FC<ConversationListProps> = ({ 
   botId, 
   filter,
   onSelectConversation,
   selectedConversationId
 }) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchConversations = async () => {
-      setLoading(true);
-      try {
-        // In a real implementation, this would fetch from the database
-        // const { data, error } = await supabase
-        //   .from("conversations")
-        //   .select("*")
-        //   .eq("bot_id", botId)
-        //   .order("last_message_time", { ascending: false });
-        
-        // if (error) throw error;
-        
-        // For demo, we'll use mock data
-        const mockData = generateMockConversations(filter);
-        
-        // Simulate network delay
-        setTimeout(() => {
-          setConversations(mockData);
-          setLoading(false);
-        }, 800);
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchConversations();
-    
-    // Set up a subscription for real-time updates
-    const channel = supabase
-      .channel('conversation_updates')
-      .on('broadcast', { event: 'conversation_updated' }, (payload) => {
-        // This would update the conversation list in real-time
-        // For demo purposes, we're not implementing the full real-time functionality
-        console.log('Conversation updated:', payload);
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [botId, filter]);
+  const { conversations, loading } = useConversations(botId, filter);
 
   if (loading) {
     return (
