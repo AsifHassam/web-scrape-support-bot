@@ -14,6 +14,16 @@ interface AnalyticsData {
   visitors: number;
 }
 
+interface BotAnalyticsRecord {
+  id: string;
+  bot_id: string;
+  date: string;
+  chat_count: number;
+  unique_visitors: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface BotAnalyticsProps {
   botId: string;
 }
@@ -61,6 +71,9 @@ const BotAnalytics = ({ botId }: BotAnalyticsProps) => {
         
       if (error) throw error;
       
+      // Cast the data to the correct type
+      const typedData = data as BotAnalyticsRecord[];
+      
       // Generate date intervals
       const dates = eachDayOfInterval({
         start: startDate,
@@ -70,7 +83,7 @@ const BotAnalytics = ({ botId }: BotAnalyticsProps) => {
       // Map data to intervals
       const mappedData: AnalyticsData[] = dates.map(date => {
         const formattedDate = format(date, 'yyyy-MM-dd');
-        const dayData = data?.find(item => item.date === formattedDate);
+        const dayData = typedData?.find(item => item.date === formattedDate);
         
         return {
           date: format(date, 'MMM dd'),
@@ -82,7 +95,7 @@ const BotAnalytics = ({ botId }: BotAnalyticsProps) => {
       setAnalyticsData(mappedData);
       
       // Calculate totals
-      const totals = data?.reduce((acc, curr) => {
+      const totals = typedData?.reduce((acc, curr) => {
         return {
           chats: acc.chats + (curr.chat_count || 0),
           visitors: acc.visitors + (curr.unique_visitors || 0)

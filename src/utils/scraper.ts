@@ -1,4 +1,3 @@
-
 export interface ScrapeResult {
   url: string;
   title: string;
@@ -17,6 +16,8 @@ export interface ScrapeProgress {
   results: ScrapeResult[];
   error?: string;
 }
+
+export type ScrapeStatus = 'idle' | 'in_progress' | 'scanning' | 'processing' | 'complete' | 'error';
 
 export const initialScrapeProgress: ScrapeProgress = {
   totalUrls: 0,

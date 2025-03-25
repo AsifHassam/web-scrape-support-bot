@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bot_analytics: {
+        Row: {
+          bot_id: string
+          chat_count: number
+          created_at: string
+          date: string
+          id: string
+          unique_visitors: number
+          updated_at: string
+        }
+        Insert: {
+          bot_id: string
+          chat_count?: number
+          created_at?: string
+          date: string
+          id?: string
+          unique_visitors?: number
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string
+          chat_count?: number
+          created_at?: string
+          date?: string
+          id?: string
+          unique_visitors?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_analytics_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bots: {
         Row: {
           company: string | null
@@ -109,6 +147,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          bot_purpose: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_purpose?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_purpose?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       waitlist: {
         Row: {

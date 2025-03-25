@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,7 +33,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/dashboard");
@@ -88,10 +86,9 @@ const Auth = () => {
         navigate("/dashboard");
       } else {
         if (step === 1) {
-          // Check if email already exists
           const { data } = await supabase.auth.signInWithPassword({
             email,
-            password: "dummypassword" // Using a dummy password to check if email exists
+            password: "dummypassword"
           });
           
           if (data.user) {
@@ -101,14 +98,12 @@ const Auth = () => {
             setLoading(false);
             return;
           } else {
-            // Move to step 2 if email doesn't exist
             setStep(2);
             setLoading(false);
             return;
           }
         } else {
-          // Handle actual signup
-          const { error } = await signUp(email, password);
+          const { error, data } = await signUp(email, password);
           if (error) {
             if (error.message.includes("User already registered")) {
               toast.error("This email is already registered");
@@ -118,14 +113,20 @@ const Auth = () => {
             throw error;
           }
           
-          // Store bot type preference
-          if (botType) {
-            const { error: prefError } = await supabase
-              .from("user_preferences")
-              .insert({ user_id: supabase.auth.getUser().then(res => res.data.user?.id), bot_type: botType });
-              
-            if (prefError) {
-              console.error("Failed to save preference:", prefError);
+          if (botType && data?.user) {
+            try {
+              const { error: prefError } = await supabase
+                .from('user_preferences')
+                .insert({ 
+                  user_id: data.user.id,
+                  bot_purpose: botType 
+                });
+                
+              if (prefError) {
+                console.error("Failed to save preference:", prefError);
+              }
+            } catch (err) {
+              console.error("Error storing user preferences:", err);
             }
           }
           
@@ -133,7 +134,6 @@ const Auth = () => {
         }
       }
     } catch (error: any) {
-      // Error is already handled in the try block
       console.error("Auth error:", error);
     } finally {
       setLoading(false);

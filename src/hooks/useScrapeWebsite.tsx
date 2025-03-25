@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { ScrapeProgress, initialScrapeProgress } from '@/utils/scraper';
+import { ScrapeProgress, ScrapeStatus, initialScrapeProgress } from '@/utils/scraper';
 import { normalizeUrl } from '@/utils/urlUtils';
 
 export const useScrapeWebsite = () => {
@@ -17,7 +17,7 @@ export const useScrapeWebsite = () => {
       // Update status to indicate scraping has started
       setScrapeProgress(prev => ({ 
         ...prev, 
-        status: 'in_progress',
+        status: 'in_progress' as ScrapeStatus,
         websiteUrl: normalizedUrl,
         progress: 0.1,
         totalUrls: 1,
