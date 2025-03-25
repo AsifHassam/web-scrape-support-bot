@@ -40,11 +40,11 @@ const Index = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-balance tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-              Transform Your Website Into An Intelligent Support Bot
+              Your Support On AutoPilot
             </h1>
             
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-balance">
-              Enter your website URL below, and we'll extract all the information to create a custom support bot that can answer questions about your content.
+              Train a custom AI chatbot for your website. Automate support, lead generation, and more.
             </p>
             
             <div className="pt-6 w-full flex flex-col items-center space-y-4">
