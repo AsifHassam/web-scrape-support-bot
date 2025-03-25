@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -183,7 +184,7 @@
     }
     
     try {
-      // Define API URL with cache-busting parameter
+      // Define API URL with cache-busting parameter and proper URL encoding
       const timestamp = new Date().getTime();
       const apiUrl = `https://web-scrape-support-bot.lovable.app/api/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
@@ -193,7 +194,6 @@
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
         },
         cache: 'no-store'
@@ -202,7 +202,6 @@
       console.log('Bot config response status:', response.status);
       console.log('Bot config response headers:', {
         contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length')
       });
       
       // Check if response is ok
@@ -212,64 +211,56 @@
         return;
       }
       
-      // Get the raw response text for debugging
-      const responseText = await response.text();
-      console.log('Raw response text received:', responseText.substring(0, 200) + '...');
-      
-      // Validate that the response is not empty
-      if (!responseText || responseText.trim() === '') {
-        console.error('Empty response received from bot config API');
-        return;
-      }
-      
-      // Check if the response might be HTML instead of JSON
-      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-        console.error('Received HTML instead of JSON. This indicates a server error or routing issue.');
-        console.log('Using default bot info due to API error');
-        return;
-      }
-      
-      // Try to parse the response text as JSON
-      try {
-        const data = JSON.parse(responseText);
-        console.log('Successfully parsed bot config data:', data);
+      // Validate content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid content type received:', contentType);
+        const rawText = await response.text();
+        console.error('Raw response text received:', rawText.substring(0, 200) + '...');
         
-        if (data && data.bot) {
-          botInfo = {
-            name: data.bot.name || 'Support Bot',
-            company: data.bot.company_name || 'Your Company',
-            primaryColor: data.bot.primary_color || '#3b82f6'
-          };
-          
-          // Set CSS variable for the primary color
-          document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
-          
-          // If the welcome message hasn't been set yet, add it
-          if (messages.length === 0) {
-            messages.push({
-              role: 'bot',
-              content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
-            });
-          }
-          
-          // Update UI if panel is open
-          if (panel) {
-            const nameElement = panel.querySelector('.bot-name');
-            const companyElement = panel.querySelector('.company-name');
-            
-            if (nameElement) nameElement.textContent = botInfo.name;
-            if (companyElement) companyElement.textContent = botInfo.company;
-            
-            // Re-render messages to apply any primary color changes
-            renderMessages();
-          }
-        } else {
-          console.error('Bot data not found in API response:', data);
+        if (rawText.trim().startsWith('<!DOCTYPE') || rawText.trim().startsWith('<html')) {
+          console.error('Received HTML instead of JSON. This indicates a server error or routing issue.');
         }
-      } catch (parseError) {
-        console.error('Error parsing bot configuration JSON:', parseError);
-        console.error('Invalid JSON response received:', responseText.substring(0, 200) + '...');
-        console.log('Using default bot info due to JSON parsing error');
+        
+        console.log('Using default bot info due to content type error');
+        return;
+      }
+      
+      // Get the response as JSON directly
+      const data = await response.json();
+      console.log('Successfully parsed bot config data:', data);
+      
+      if (data && data.bot) {
+        botInfo = {
+          name: data.bot.name || 'Support Bot',
+          company: data.bot.company || 'Your Company',
+          primaryColor: data.bot.primary_color || '#3b82f6'
+        };
+        
+        // Set CSS variable for the primary color
+        document.documentElement.style.setProperty('--chat-primary-color', botInfo.primaryColor);
+        
+        // If the welcome message hasn't been set yet, add it
+        if (messages.length === 0) {
+          messages.push({
+            role: 'bot',
+            content: `Hello! I'm ${botInfo.name}, a chatbot for ${botInfo.company}. How can I help you today?`
+          });
+        }
+        
+        // Update UI if panel is open
+        if (panel) {
+          const nameElement = panel.querySelector('.bot-name');
+          const companyElement = panel.querySelector('.company-name');
+          
+          if (nameElement) nameElement.textContent = botInfo.name;
+          if (companyElement) companyElement.textContent = botInfo.company;
+          
+          // Re-render messages to apply any primary color changes
+          renderMessages();
+        }
+      } else {
+        console.error('Bot data not found in API response:', data);
       }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
@@ -412,44 +403,25 @@
       fetch(`${apiUrl}&sessionId=${encodeURIComponent(sessionId)}`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Accept': 'application/json'
         }
       })
         .then(response => {
           console.log('API response status:', response.status);
           console.log('API response headers:', {
-            contentType: response.headers.get('content-type'),
-            contentLength: response.headers.get('content-length')
+            contentType: response.headers.get('content-type')
           });
           
           if (!response.ok) {
-            return response.text().then(text => {
-              console.error(`API responded with status ${response.status}: ${response.statusText}`);
-              console.error('Response body preview:', text.substring(0, 200) + '...');
-              throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
-            });
+            return Promise.reject(new Error(`API responded with status ${response.status}`));
           }
 
-          // First get the raw text to verify what's being returned
-          return response.text().then(text => {
-            console.log('Raw API response text preview:', text.substring(0, 200) + '...');
-            
-            // Try to parse as JSON, but handle if it's not valid JSON
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              console.error('Failed to parse response as JSON:', e);
-              console.error('Invalid JSON received:', text.substring(0, 200) + '...');
-              
-              // Check if the response looks like HTML
-              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                console.error('Received HTML instead of JSON. This might indicate a server error or redirection.');
-              }
-              
-              throw new Error('Received invalid JSON response from server');
-            }
-          });
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            return Promise.reject(new Error('Received non-JSON response'));
+          }
+
+          return response.json();
         })
         .then(data => {
           console.log('API response data:', data);
