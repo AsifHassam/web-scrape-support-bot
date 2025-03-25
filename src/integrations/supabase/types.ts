@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bots: {
+        Row: {
+          company: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           browser: string | null
@@ -50,6 +77,38 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: []
+      }
+      knowledge_sources: {
+        Row: {
+          bot_id: string
+          content: string | null
+          created_at: string
+          id: string
+          source_type: string
+        }
+        Insert: {
+          bot_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          source_type: string
+        }
+        Update: {
+          bot_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_sources_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       waitlist: {
         Row: {
