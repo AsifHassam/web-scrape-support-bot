@@ -28,7 +28,18 @@ export default defineConfig(({ mode }) => ({
         }
       }
     },
-    cors: true  // Enable CORS for all requests
+    cors: {
+      origin: [
+        'http://localhost:8080',
+        'http://localhost:8000',
+        'http://127.0.0.1:5500',
+        'https://web-scrape-support-bot.lovable.app',
+        'https://0b57-197-237-120-222.ngrok-free.app'
+      ],
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
+    }
   },
   plugins: [
     react(),
@@ -41,3 +52,4 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+

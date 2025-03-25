@@ -78,3 +78,4 @@ if (typeof window !== 'undefined') {
     return originalFetch.apply(window, [input, init]);
   };
 }
+

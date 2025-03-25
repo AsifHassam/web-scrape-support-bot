@@ -285,7 +285,8 @@
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'omit'
       })
         .then(response => {
           console.log('API response received:', response);
@@ -347,3 +348,4 @@
   // Debug information
   console.log('Chat widget initialized with bot ID:', botId);
 })();
+
