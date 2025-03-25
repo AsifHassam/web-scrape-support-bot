@@ -123,10 +123,18 @@
   `;
   document.head.appendChild(style);
 
-  // Get the bot ID from the script
+  // Get the bot ID from the script tag
+  let scriptTag = document.currentScript;
+  if (!scriptTag) {
+    scriptTag = document.querySelector('script[src*="widget-script.js"]');
+  }
+  
   let botId = '';
-  if (window.__supportBot && window.__supportBot.botId) {
-    botId = window.__supportBot.botId;
+  if (scriptTag) {
+    botId = scriptTag.getAttribute('data-bot-id') || '';
+    console.log('Bot ID extracted from script tag:', botId);
+  } else {
+    console.error('Could not find script tag for widget');
   }
 
   // Create widget container
@@ -245,7 +253,12 @@
     setTimeout(() => {
       // This would be replaced with a real API call to your backend
       // using the botId to get the response
-      const apiUrl = `https://7e6a573a-460b-43a5-9cdd-5d5f597b90e0.lovableproject.com/api/chat?botId=${botId}&message=${encodeURIComponent(userMessage.content)}`;
+      const baseUrl = window.location.origin.includes('localhost') ? 
+        'https://web-scrape-support-bot.lovable.app' : 
+        window.location.origin;
+      
+      const apiUrl = `${baseUrl}/api/chat?botId=${botId}&message=${encodeURIComponent(userMessage.content)}`;
+      console.log('Sending request to API:', apiUrl);
       
       // Show typing indicator
       const typingIndicator = document.createElement('div');
@@ -256,12 +269,17 @@
       
       // Make the real API call
       fetch(apiUrl)
-        .then(response => response.json())
-        .catch(() => {
+        .then(response => {
+          console.log('API response received:', response);
+          return response.json();
+        })
+        .catch((error) => {
           // Fallback response if API call fails
+          console.error('API call failed:', error);
           return { response: "I'm having trouble connecting to my knowledge base right now. Please try again later." };
         })
         .then(data => {
+          console.log('API response data:', data);
           // Remove typing indicator
           const indicator = document.getElementById('typing-indicator');
           if (indicator) indicator.remove();
@@ -291,4 +309,7 @@
 
   // Add click event to the button
   button.addEventListener('click', toggleWidget);
+  
+  // Debug information
+  console.log('Chat widget initialized with bot ID:', botId);
 })();

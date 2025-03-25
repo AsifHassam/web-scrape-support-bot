@@ -29,9 +29,14 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
   // Load bot data and knowledge base
   useEffect(() => {
     const loadBotData = async () => {
-      if (!botId) return;
+      if (!botId) {
+        console.error('No bot ID provided to ChatWidget');
+        return;
+      }
       
       try {
+        console.log('Loading data for bot ID:', botId);
+        
         // Fetch bot information
         const { data: botData, error: botError } = await supabase
           .from('bots')
@@ -45,6 +50,7 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
         }
         
         if (botData) {
+          console.log('Bot data loaded successfully:', botData);
           setBotInfo({
             name: botData.name || 'Website Assistant',
             company: botData.company || 'Your Company'
@@ -70,17 +76,27 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
           }
           
           if (sourcesData && sourcesData.length > 0) {
+            console.log('Knowledge sources loaded:', sourcesData);
+            
             // Extract content for the chatbot knowledge base
             const websiteSources = sourcesData.filter(source => source.source_type === 'website');
             
             if (websiteSources.length > 0) {
-              // Simulate loading the knowledge from the database
-              // In a real implementation, you would load the actual content
-              const mockKnowledge = websiteSources.flatMap(source => [
-                `Content from ${source.content}`,
-                `This is a simulated knowledge entry from ${source.content}`,
-                `Another simulated entry from ${source.content}`
-              ]);
+              // In a real implementation, you would load actual content from a database or API
+              // For this implementation, we'll create mock content based on the URLs
+              const mockKnowledge = websiteSources.flatMap(source => {
+                const url = source.content;
+                return [
+                  `Website: ${url}`,
+                  `This is content from ${url}`,
+                  `Important information from ${url}`,
+                  `Frequently asked questions from ${url}`,
+                  `Key features described on ${url}`,
+                  `Product details from ${url}`,
+                  `Contact information: support@example.com, phone: (555) 123-4567`,
+                  `Office hours: Monday-Friday 9am-5pm EST`,
+                ];
+              });
               
               chatbotService.updateKnowledgeBase(
                 mockKnowledge, 
@@ -90,6 +106,8 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
               setIsKnowledgeLoaded(true);
               console.log(`Loaded knowledge base for bot ${botId} with ${mockKnowledge.length} entries`);
             }
+          } else {
+            console.warn('No knowledge sources found for bot ID:', botId);
           }
         }
       } catch (error) {
@@ -121,7 +139,9 @@ export const ChatWidget = ({ botId }: ChatWidgetProps = {}) => {
     setIsLoading(true);
     
     try {
+      console.log('Sending message to chatbot service:', inputMessage);
       const botResponse = await chatbotService.sendMessage(inputMessage);
+      console.log('Received response from chatbot service:', botResponse);
       setMessages(prev => [...prev, botResponse]);
     } catch (error) {
       console.error('Error sending message:', error);
