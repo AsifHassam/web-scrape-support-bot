@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, User } from "lucide-react";
+import { PlusCircle, Edit, Trash2, User, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Dialog,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Bot {
   id: string;
@@ -56,11 +57,17 @@ const Dashboard = () => {
     navigate("/create-bot");
   };
 
-  const handleEditBot = (id: string) => {
+  const handleEditBot = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
     navigate(`/edit-bot/${id}`);
   };
+  
+  const handleViewConversations = (id: string) => {
+    navigate(`/conversations/${id}`);
+  };
 
-  const openDeleteConfirmation = (id: string) => {
+  const openDeleteConfirmation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
     setDeletingBotId(id);
     setConfirmDialogOpen(true);
   };
@@ -149,33 +156,48 @@ const Dashboard = () => {
             {bots.map((bot) => (
               <div
                 key={bot.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleViewConversations(bot.id)}
               >
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-                  {bot.name}
-                </h3>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    {bot.name}
+                  </h3>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                    <span className="h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
+                    Online
+                  </Badge>
+                </div>
+                
                 <div className="space-y-2 mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {bot.company}
                   </p>
+                  
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <MessageSquare className="h-4 w-4 mr-1.5" />
+                    <span>11 Active conversations</span>
+                  </div>
+                  
                   {bot.bot_type && (
                     <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-100">
                       {formatBotType(bot.bot_type)}
                     </span>
                   )}
                 </div>
+                
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEditBot(bot.id)}
+                    onClick={(e) => handleEditBot(bot.id, e)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openDeleteConfirmation(bot.id)}
+                    onClick={(e) => openDeleteConfirmation(bot.id, e)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

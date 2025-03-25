@@ -1,70 +1,85 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Index from "./pages/Index";
-import ScrapedSite from "./pages/ScrapedSite";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import CreateBot from "./pages/CreateBot";
-import EditBot from "./pages/EditBot";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Pricing from "./pages/Pricing";
-import Contact from "./pages/Contact";
+import { Toaster as SonnerToaster } from "sonner";
+import { ThemeProvider } from "./components/theme-provider";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Dashboard from "@/pages/Dashboard";
+import CreateBot from "@/pages/CreateBot";
+import EditBot from "@/pages/EditBot";
+import Conversations from "@/pages/Conversations";
+import ScrapedSite from "@/pages/ScrapedSite";
+import Auth from "@/pages/Auth";
+import Profile from "@/pages/Profile";
+import Index from "@/pages/Index";
+import Pricing from "@/pages/Pricing";
+import Contact from "@/pages/Contact";
+import NotFound from "@/pages/NotFound";
 
-// Create a client instance outside of the component
-const queryClient = new QueryClient();
-
-function App() {
+const App = () => {
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/scraped-site" element={<ScrapedSite />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/contact" element={<Contact />} />
-              
-              {/* Protected routes (require authentication) */}
-              <Route path="/dashboard" element={
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/preview" element={<ScrapedSite />} />
+            
+            <Route
+              path="/dashboard"
+              element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/create-bot" element={
+              }
+            />
+            
+            <Route
+              path="/create-bot"
+              element={
                 <ProtectedRoute>
                   <CreateBot />
                 </ProtectedRoute>
-              } />
-              <Route path="/edit-bot/:id" element={
+              }
+            />
+            
+            <Route
+              path="/edit-bot/:id"
+              element={
                 <ProtectedRoute>
                   <EditBot />
                 </ProtectedRoute>
-              } />
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+              }
+            />
+            
+            <Route
+              path="/conversations/:botId"
+              element={
+                <ProtectedRoute>
+                  <Conversations />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+        <SonnerToaster position="top-right" richColors />
+      </AuthProvider>
+    </ThemeProvider>
   );
-}
+};
 
 export default App;
