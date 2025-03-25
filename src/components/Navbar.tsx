@@ -67,6 +67,12 @@ export const Navbar = () => {
             >
               How It Works
             </a>
+            <Link 
+              to="/pricing"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+            >
+              Pricing
+            </Link>
           </nav>
           
           <div className="flex items-center space-x-4">
