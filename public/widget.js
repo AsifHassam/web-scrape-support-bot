@@ -1,4 +1,3 @@
-
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -249,10 +248,29 @@
     input.value = '';
     renderMessages();
     
-    // Simulate API call to get bot response
+    // Determine API endpoint based on environment
     setTimeout(() => {
-      // Always use the deployed URL, not dynamically determined
-      const baseUrl = 'https://web-scrape-support-bot.lovable.app';
+      // Determine the base URL based on the current environment
+      let baseUrl;
+      
+      // Define allowed domains with their production URLs
+      const productionUrl = 'https://web-scrape-support-bot.lovable.app';
+      const allowedDomains = {
+        'localhost:8000': productionUrl,
+        '127.0.0.1:5500': productionUrl,
+        'localhost:8080': productionUrl
+      };
+      
+      // Check current hostname and port
+      const currentHost = window.location.host;
+      
+      // If current host is in our allowed domains list, use the production URL
+      // Otherwise default to the production URL
+      if (allowedDomains[currentHost]) {
+        baseUrl = allowedDomains[currentHost];
+      } else {
+        baseUrl = productionUrl;
+      }
       
       const apiUrl = `${baseUrl}/api/chat?botId=${botId}&message=${encodeURIComponent(userMessage.content)}`;
       console.log('Sending request to API:', apiUrl);
@@ -265,7 +283,15 @@
       document.getElementById('chat-widget-body').appendChild(typingIndicator);
       
       // Make the real API call
-      fetch(apiUrl)
+      fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': window.location.origin
+        },
+        mode: 'cors'
+      })
         .then(response => {
           console.log('API response received:', response);
           return response.json();
