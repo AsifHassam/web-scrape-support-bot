@@ -16,7 +16,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     console.log("AdminRoute: checking admin status, user:", user?.email);
     
     const checkAdminStatus = () => {
-      // First check if the user is logged in with the admin email
+      // Check if the user is logged in with the admin email (hello@liorra.io)
+      // This provides true admin privileges to this specific account
       const isAdminEmail = user?.email === "hello@liorra.io";
       
       // Then check if admin is authenticated via localStorage
@@ -27,7 +28,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       const now = Date.now();
       const eightHoursMs = 8 * 60 * 60 * 1000;
       
-      let isStillValid = adminAuthenticated && isAdminEmail;
+      let isStillValid = (adminAuthenticated && isAdminEmail);
       
       if (adminAuthTime) {
         const authTimeMs = parseInt(adminAuthTime);

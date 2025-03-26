@@ -93,19 +93,18 @@ const Admin = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Instead of using Supabase admin APIs directly, use a custom approach
-      // Fetch all users from the auth.users table via users_metadata
+      // Query both the user_profiles and users_metadata tables to get complete user information
       
-      // 1. Query user_profiles to get user email addresses
+      // 1. Get all users from the auth.users table via user_profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, display_name');
+        .select('id, display_name, avatar_url');
       
       if (profilesError) {
         throw profilesError;
       }
       
-      // 2. Fetch users_metadata which contains status and payment info
+      // 2. Get all users' metadata
       const { data: metadataData, error: metadataError } = await supabase
         .from('users_metadata')
         .select('*');
