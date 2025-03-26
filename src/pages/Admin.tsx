@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,7 +94,18 @@ const Admin = () => {
     setLoading(true);
     try {
       // Instead of using Supabase admin APIs directly, use a custom approach
-      // Fetch all users from the users_metadata table
+      // Fetch all users from the auth.users table via users_metadata
+      
+      // 1. Query user_profiles to get user email addresses
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('id, display_name');
+      
+      if (profilesError) {
+        throw profilesError;
+      }
+      
+      // 2. Fetch users_metadata which contains status and payment info
       const { data: metadataData, error: metadataError } = await supabase
         .from('users_metadata')
         .select('*');
@@ -102,14 +114,20 @@ const Admin = () => {
         throw metadataError;
       }
       
-      // For each user in metadata, try to get their auth details
-      // This is a simplification since we can't access auth.users directly with anon key
+      // 3. Create a map of profile data by id for easy lookup
+      const profilesMap = new Map();
+      profilesData?.forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
+      
+      // 4. Combine profile data with metadata
       const combinedUsers: UserData[] = metadataData?.map(metadata => {
+        const profile = profilesMap.get(metadata.id);
         return {
           id: metadata.id,
-          email: metadata.email || 'No email available',
+          email: profile?.display_name || `user-${metadata.id.substring(0, 8)}`,
           created_at: metadata.created_at,
-          last_sign_in_at: metadata.last_active_at || null,
+          last_sign_in_at: metadata.updated_at || null,
           status: metadata.status as 'ACTIVE' | 'BLOCKED',
           payment_status: metadata.payment_status as 'FREE' | 'PAID' | 'TRIAL'
         };
