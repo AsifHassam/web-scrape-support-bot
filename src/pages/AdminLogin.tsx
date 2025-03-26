@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
   const [username, setUsername] = useState<string>("");
@@ -18,11 +19,17 @@ const AdminLogin = () => {
 
   // Check if user is already logged in as admin
   useEffect(() => {
-    const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-    if (user && adminAuthenticated) {
-      console.log("Already logged in as admin, redirecting to dashboard");
-      navigate("/admin", { replace: true });
-    }
+    const checkAdminStatus = async () => {
+      if (user) {
+        const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
+        if (adminAuthenticated) {
+          console.log("Already logged in as admin, redirecting to dashboard");
+          navigate("/admin", { replace: true });
+        }
+      }
+    };
+    
+    checkAdminStatus();
   }, [user, navigate]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -33,18 +40,36 @@ const AdminLogin = () => {
     try {
       if (username === "admin" && password === "Liorra2025!") {
         console.log("Admin credentials valid, setting adminAuthenticated to true");
-        // Store admin status in localStorage
+        
+        // First ensure the user is logged in to Supabase
+        if (!user) {
+          // We need a valid Supabase user first
+          const { error } = await supabase.auth.signInWithPassword({
+            email: "admin@example.com",
+            password: "Liorra2025!"
+          });
+          
+          if (error) {
+            console.error("Failed to authenticate with Supabase:", error);
+            setError("Authentication error: " + error.message);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Store admin status in localStorage with timestamp
         localStorage.setItem("adminAuthenticated", "true");
+        localStorage.setItem("adminAuthTime", Date.now().toString());
+        
         toast.success("Admin login successful");
         
-        // Use a more reliable way to redirect
-        console.log("Attempting to redirect to admin dashboard...");
+        console.log("Admin authenticated, redirecting to admin dashboard");
         
-        // Small timeout to ensure the localStorage is set before navigating
+        // Use a more reliable way to redirect with a longer delay
         setTimeout(() => {
           console.log("Now redirecting to admin dashboard");
           navigate("/admin", { replace: true });
-        }, 500);
+        }, 1000);
       } else {
         setError("Invalid admin credentials");
       }

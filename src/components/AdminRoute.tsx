@@ -18,13 +18,38 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const checkAdminStatus = () => {
       // Check if admin is authenticated via localStorage
       const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-      console.log("AdminRoute: adminAuthenticated =", adminAuthenticated);
-      setIsAdmin(adminAuthenticated);
+      
+      // Add a time-based check to require re-authentication after 8 hours
+      const adminAuthTime = localStorage.getItem("adminAuthTime");
+      const now = Date.now();
+      const eightHoursMs = 8 * 60 * 60 * 1000;
+      
+      let isStillValid = adminAuthenticated;
+      
+      if (adminAuthTime) {
+        const authTimeMs = parseInt(adminAuthTime);
+        if (now - authTimeMs > eightHoursMs) {
+          // Admin session expired
+          console.log("AdminRoute: admin session expired");
+          localStorage.removeItem("adminAuthenticated");
+          localStorage.removeItem("adminAuthTime");
+          isStillValid = false;
+        }
+      }
+      
+      console.log("AdminRoute: adminAuthenticated =", isStillValid);
+      setIsAdmin(isStillValid);
       setCheckingAdmin(false);
     };
     
-    // Small delay to ensure localStorage is checked after it might have been set
-    setTimeout(checkAdminStatus, 100);
+    if (user) {
+      // If user is authenticated with Supabase, check admin status
+      setTimeout(checkAdminStatus, 500);
+    } else {
+      // If no user, definitely not an admin
+      setIsAdmin(false);
+      setCheckingAdmin(false);
+    }
   }, [user]); // Re-check when auth state changes
 
   // Show loading state while checking authentication
