@@ -185,12 +185,6 @@ const AdminLogin = () => {
               Back to Home
             </Button>
           </div>
-          
-          <div className="mt-6 text-center text-sm">
-            <p className="text-gray-600 dark:text-gray-400">
-              Note: You need to first create a Supabase account with email "hello@liorra.io" and password "Liorra2025!"
-            </p>
-          </div>
         </div>
       </div>
     </div>
