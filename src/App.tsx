@@ -27,6 +27,7 @@ const App = () => {
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/preview" element={<ScrapedSite />} />
+            <Route path="/scraped-site" element={<ScrapedSite />} />
             
             <Route
               path="/dashboard"
