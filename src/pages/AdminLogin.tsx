@@ -20,7 +20,8 @@ const AdminLogin = () => {
   useEffect(() => {
     const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
     if (user && adminAuthenticated) {
-      navigate("/admin");
+      console.log("Already logged in as admin, redirecting to dashboard");
+      navigate("/admin", { replace: true });
     }
   }, [user, navigate]);
 
@@ -31,15 +32,19 @@ const AdminLogin = () => {
 
     try {
       if (username === "admin" && password === "Liorra2025!") {
+        console.log("Admin credentials valid, setting adminAuthenticated to true");
         // Store admin status in localStorage
         localStorage.setItem("adminAuthenticated", "true");
         toast.success("Admin login successful");
         
-        // Force immediate redirect to admin dashboard
+        // Use a more reliable way to redirect
+        console.log("Attempting to redirect to admin dashboard...");
+        
+        // Small timeout to ensure the localStorage is set before navigating
         setTimeout(() => {
-          console.log("Redirecting to admin dashboard...");
+          console.log("Now redirecting to admin dashboard");
           navigate("/admin", { replace: true });
-        }, 100); // Small delay to ensure toast is visible
+        }, 500);
       } else {
         setError("Invalid admin credentials");
       }

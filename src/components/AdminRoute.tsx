@@ -13,16 +13,23 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const [checkingAdmin, setCheckingAdmin] = useState<boolean>(true);
   
   useEffect(() => {
-    console.log("AdminRoute: checking admin status");
-    // Check if admin is authenticated via localStorage
-    const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-    console.log("AdminRoute: adminAuthenticated =", adminAuthenticated);
-    setIsAdmin(adminAuthenticated);
-    setCheckingAdmin(false);
+    console.log("AdminRoute: checking admin status, user:", user?.email);
+    
+    const checkAdminStatus = () => {
+      // Check if admin is authenticated via localStorage
+      const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
+      console.log("AdminRoute: adminAuthenticated =", adminAuthenticated);
+      setIsAdmin(adminAuthenticated);
+      setCheckingAdmin(false);
+    };
+    
+    // Small delay to ensure localStorage is checked after it might have been set
+    setTimeout(checkAdminStatus, 100);
   }, [user]); // Re-check when auth state changes
 
   // Show loading state while checking authentication
   if (loading || checkingAdmin) {
+    console.log("AdminRoute: still loading or checking admin status");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-600 dark:text-gray-400">Loading...</p>
