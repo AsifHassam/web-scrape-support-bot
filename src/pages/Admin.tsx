@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -86,11 +85,13 @@ const Admin = () => {
     },
   });
 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // In a real app, you'd use a Supabase admin API or function to get users.
-      // For this demo, we'll simulate some users
       const mockUsers: UserData[] = [
         {
           id: "1",
@@ -127,17 +128,11 @@ const Admin = () => {
     }
   };
 
-  useState(() => {
-    fetchUsers();
-  }, []);
-
   const handleAddUser = async (data: FormValues) => {
     try {
       toast.success(`User added: ${data.email}`);
-      // In a real app, you'd use Supabase admin API to create the user
       setOpenAddDialog(false);
       form.reset();
-      // Refetch users
       fetchUsers();
     } catch (error: any) {
       toast.error("Failed to add user: " + error.message);
@@ -149,7 +144,6 @@ const Admin = () => {
       const newStatus = currentStatus === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
       const actionText = newStatus === 'BLOCKED' ? 'blocked' : 'unblocked';
       
-      // Update local state for immediate UI feedback
       setUsers(users.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
       ));
@@ -157,7 +151,6 @@ const Admin = () => {
       toast.success(`User ${actionText} successfully`);
     } catch (error: any) {
       toast.error(`Failed to ${currentStatus === 'ACTIVE' ? 'block' : 'unblock'} user: ${error.message}`);
-      // Revert the local change on failure
       fetchUsers();
     }
   };
@@ -166,9 +159,6 @@ const Admin = () => {
     if (!selectedUser) return;
     
     try {
-      // In a real app, you'd use Supabase admin API to delete the user
-      
-      // Update local state for immediate UI feedback
       setUsers(users.filter(user => user.id !== selectedUser.id));
       toast.success("User deleted successfully");
       setDeleteDialogOpen(false);
@@ -179,7 +169,6 @@ const Admin = () => {
 
   const updatePaymentStatus = async (userId: string, newStatus: 'FREE' | 'PAID' | 'TRIAL') => {
     try {
-      // Update local state for immediate UI feedback
       setUsers(users.map(user => 
         user.id === userId ? { ...user, payment_status: newStatus } : user
       ));
@@ -187,7 +176,6 @@ const Admin = () => {
       toast.success(`Payment status updated to ${newStatus}`);
     } catch (error: any) {
       toast.error("Failed to update payment status: " + error.message);
-      // Revert the local change on failure
       fetchUsers();
     }
   };

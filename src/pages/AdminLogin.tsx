@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { Lock, LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AdminLogin = () => {
   const [username, setUsername] = useState<string>("");
@@ -13,6 +14,15 @@ const AdminLogin = () => {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Check if user is already logged in as admin
+  useEffect(() => {
+    const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
+    if (user && adminAuthenticated) {
+      navigate("/admin");
+    }
+  }, [user, navigate]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();

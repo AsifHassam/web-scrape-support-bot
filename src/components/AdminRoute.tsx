@@ -30,7 +30,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   
   // Check if user is authenticated first
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   // If not admin, redirect to admin login
