@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import Dashboard from "@/pages/Dashboard";
 import CreateBot from "@/pages/CreateBot";
 import EditBot from "@/pages/EditBot";
@@ -11,6 +12,7 @@ import Conversations from "@/pages/Conversations";
 import ScrapedSite from "@/pages/ScrapedSite";
 import Auth from "@/pages/Auth";
 import Profile from "@/pages/Profile";
+import Admin from "@/pages/Admin";
 import Index from "@/pages/Index";
 import Pricing from "@/pages/Pricing";
 import Contact from "@/pages/Contact";
@@ -71,6 +73,15 @@ const App = () => {
                 <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
               }
             />
             
