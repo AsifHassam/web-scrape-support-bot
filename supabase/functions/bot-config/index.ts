@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control',
@@ -13,7 +12,6 @@ const corsHeaders = {
 serve(async (req) => {
   console.log('Bot config function called with:', req.method, req.url);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       status: 200, 
@@ -21,7 +19,6 @@ serve(async (req) => {
     });
   }
 
-  // Only allow GET requests
   if (req.method !== 'GET') {
     return new Response(
       JSON.stringify({
@@ -35,12 +32,10 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the project URL and anonymous key
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get the botId from the URL
     const url = new URL(req.url);
     const botId = url.searchParams.get('botId');
 
