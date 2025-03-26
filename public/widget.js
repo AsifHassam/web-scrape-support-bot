@@ -1,3 +1,4 @@
+
 (function() {
   // Create and inject our stylesheet
   const style = document.createElement('style');
@@ -175,6 +176,9 @@
     primaryColor: '#3b82f6'
   };
 
+  // Supabase anon key - needed for authentication
+  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ndHljcGNub2JrYmZvbGtob2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTU5MTAsImV4cCI6MjA1Nzc5MTkxMH0.3jtCivr5HhBa2N_EErjWLUHrebhP6DbbXKXeJkwIeUs';
+
   // Function to fetch bot configuration from the Supabase Edge Function
   async function fetchBotConfig() {
     if (!botId) {
@@ -188,11 +192,13 @@
       const apiUrl = `https://mgtycpcnobkbfolkhobk.supabase.co/functions/v1/bot-config?botId=${encodeURIComponent(botId)}&_t=${timestamp}`;
       console.log('Fetching bot configuration from:', apiUrl);
       
-      // Make the fetch request with explicit JSON headers but WITHOUT cache-control
+      // Make the fetch request with authorization header
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey
         }
       });
       
@@ -385,7 +391,9 @@
       fetch(`${apiUrl}&sessionId=${encodeURIComponent(sessionId)}`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey
         }
       })
         .then(response => {
