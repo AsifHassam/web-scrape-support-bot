@@ -55,23 +55,7 @@ serve(async (req) => {
       );
     }
 
-    // Debug: Check for valid UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(botId)) {
-      console.error('Invalid botId format:', botId);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid botId format', 
-          details: 'The botId must be a valid UUID' 
-        }),
-        { 
-          status: 400, 
-          headers: corsHeaders 
-        }
-      );
-    }
-
-    // Debug: List all bots in the database first for debugging
+    // Debug: List all bots in the database for debugging
     const { data: allBots, error: listError } = await supabase
       .from('bots')
       .select('id, name')
@@ -83,22 +67,42 @@ serve(async (req) => {
       console.error('Error listing bots:', listError);
     }
 
-    // Fetch bot details from Supabase
+    // Fetch bot details from Supabase - use non-strict equality to handle string UUID vs UUID object
     const { data: bot, error } = await supabase
       .from('bots')
       .select('*')
-      .eq('id', botId)
-      .maybeSingle();
+      .filter('id', 'eq', botId.trim())
+      .limit(1)
+      .single();
 
     if (error) {
       console.error('Error fetching bot configuration:', error);
+      
+      // Try again with a direct query to check if the issue is with UUID format
+      const { data: directBot, error: directError } = await supabase
+        .rpc('get_bot_by_id_string', { id_param: botId.trim() })
+        .maybeSingle();
+        
+      if (directError || !directBot) {
+        console.error('Direct query also failed:', directError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to fetch bot configuration', 
+            details: error.message,
+            availableBots: allBots?.map(b => ({ id: b.id, name: b.name })) || []
+          }),
+          { 
+            status: 500, 
+            headers: corsHeaders 
+          }
+        );
+      }
+      
+      console.log('Found bot via direct query:', directBot);
       return new Response(
-        JSON.stringify({ 
-          error: 'Failed to fetch bot configuration', 
-          details: error.message 
-        }),
+        JSON.stringify({ bot: directBot }),
         { 
-          status: 500, 
+          status: 200, 
           headers: corsHeaders 
         }
       );
@@ -109,6 +113,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Bot not found',
+          botIdRequested: botId,
           availableBots: allBots?.map(b => ({ id: b.id, name: b.name })) || []
         }),
         { 
