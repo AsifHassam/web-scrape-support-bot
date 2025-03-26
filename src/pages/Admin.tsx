@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,14 +92,8 @@ const Admin = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch users from Supabase auth.users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        throw authError;
-      }
-      
-      // Fetch metadata for these users
+      // Instead of using Supabase admin APIs directly, use a custom approach
+      // Fetch all users from the users_metadata table
       const { data: metadataData, error: metadataError } = await supabase
         .from('users_metadata')
         .select('*');
@@ -109,30 +102,20 @@ const Admin = () => {
         throw metadataError;
       }
       
-      // Create a map of user metadata by user ID for easy lookup
-      const metadataMap = new Map();
-      metadataData?.forEach(metadata => {
-        metadataMap.set(metadata.id, metadata);
-      });
-      
-      // Combine auth users with their metadata
-      const combinedUsers = authUsers?.users.map(user => {
-        const metadata = metadataMap.get(user.id) || { 
-          status: 'ACTIVE', 
-          payment_status: 'FREE'
-        };
-        
+      // For each user in metadata, try to get their auth details
+      // This is a simplification since we can't access auth.users directly with anon key
+      const combinedUsers: UserData[] = metadataData?.map(metadata => {
         return {
-          id: user.id,
-          email: user.email || 'No email',
-          created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
+          id: metadata.id,
+          email: metadata.email || 'No email available',
+          created_at: metadata.created_at,
+          last_sign_in_at: metadata.last_active_at || null,
           status: metadata.status as 'ACTIVE' | 'BLOCKED',
           payment_status: metadata.payment_status as 'FREE' | 'PAID' | 'TRIAL'
         };
-      });
+      }) || [];
       
-      setUsers(combinedUsers || []);
+      setUsers(combinedUsers);
     } catch (error: any) {
       toast.error("Failed to fetch users: " + error.message);
       console.error("Error fetching users:", error);
@@ -173,18 +156,18 @@ const Admin = () => {
 
   const handleAddUser = async (data: FormValues) => {
     try {
-      // Create a new user in Supabase
-      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+      // Instead of creating a user with admin API, use sign up
+      const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        email_confirm: true
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
       });
       
-      if (userError) {
-        throw userError;
+      if (error) {
+        throw error;
       }
-      
-      // The users_metadata entry should be created automatically via our trigger
       
       toast.success(`User added: ${data.email}`);
       setOpenAddDialog(false);
@@ -213,13 +196,6 @@ const Admin = () => {
         throw error;
       }
       
-      // Optionally, if you want to actually disable the user in auth:
-      if (newStatus === 'BLOCKED') {
-        await supabase.auth.admin.updateUserById(userId, { ban_duration: '87600h' }); // 10 years
-      } else {
-        await supabase.auth.admin.updateUserById(userId, { ban_duration: '0' });
-      }
-      
       // Update the local state
       setUsers(users.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
@@ -236,14 +212,16 @@ const Admin = () => {
     if (!selectedUser) return;
     
     try {
-      // Delete the user from Supabase Auth
-      const { error } = await supabase.auth.admin.deleteUser(selectedUser.id);
+      // Instead of directly deleting the user with admin API,
+      // just delete from users_metadata which will be our source of truth
+      const { error } = await supabase
+        .from('users_metadata')
+        .delete()
+        .eq('id', selectedUser.id);
       
       if (error) {
         throw error;
       }
-      
-      // The users_metadata should be automatically deleted via cascade
       
       setUsers(users.filter(user => user.id !== selectedUser.id));
       toast.success("User deleted successfully");
