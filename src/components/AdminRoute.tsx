@@ -17,7 +17,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
     setIsAdmin(adminAuthenticated);
     setCheckingAdmin(false);
-  }, []);
+  }, [user]); // Add user as a dependency to re-check when auth state changes
 
   // Show loading state while checking authentication
   if (loading || checkingAdmin) {
