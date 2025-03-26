@@ -44,6 +44,9 @@ serve(async (req) => {
     const url = new URL(req.url);
     const botId = url.searchParams.get('botId');
 
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    console.log('Fetching configuration for bot ID:', botId);
+
     if (!botId) {
       console.error('Missing required parameter: botId');
       return new Response(
@@ -57,7 +60,33 @@ serve(async (req) => {
       );
     }
 
-    console.log('Fetching configuration for bot ID:', botId);
+    // Debug: Check for valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(botId)) {
+      console.error('Invalid botId format:', botId);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid botId format', 
+          details: 'The botId must be a valid UUID' 
+        }),
+        { 
+          status: 400, 
+          headers: corsHeaders 
+        }
+      );
+    }
+
+    // Debug: List all bots in the database first for debugging
+    const { data: allBots, error: listError } = await supabase
+      .from('bots')
+      .select('id, name')
+      .limit(10);
+    
+    console.log('Available bots in database:', allBots);
+    
+    if (listError) {
+      console.error('Error listing bots:', listError);
+    }
 
     // Fetch bot details from Supabase
     const { data: bot, error } = await supabase
@@ -84,7 +113,8 @@ serve(async (req) => {
       console.log('Bot not found for ID:', botId);
       return new Response(
         JSON.stringify({ 
-          error: 'Bot not found' 
+          error: 'Bot not found',
+          availableBots: allBots?.map(b => ({ id: b.id, name: b.name })) || []
         }),
         { 
           status: 404, 

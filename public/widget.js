@@ -149,8 +149,22 @@
   
   let botId = '';
   if (scriptTag) {
+    // Try to get bot ID from data-bot-id attribute first
     botId = scriptTag.getAttribute('data-bot-id') || '';
-    console.log('Bot ID extracted from script tag:', botId);
+    
+    // If not available, check for initialization function calls
+    if (!botId && window.cw && window.cw.q) {
+      // Look through queued commands for an init command with botId
+      for (let i = 0; i < window.cw.q.length; i++) {
+        const cmd = window.cw.q[i];
+        if (cmd && cmd.length >= 2 && cmd[0] === 'init' && cmd[1].botId) {
+          botId = cmd[1].botId;
+          break;
+        }
+      }
+    }
+    
+    console.log('Bot ID extracted:', botId);
   } else {
     console.error('Could not find script tag for widget');
   }
@@ -183,6 +197,7 @@
   async function fetchBotConfig() {
     if (!botId) {
       console.error('No bot ID found, cannot fetch configuration');
+      showDefaultErrorMessage("No bot ID found. Please ensure the widget is properly configured with a valid bot ID.");
       return;
     }
     
@@ -211,6 +226,16 @@
       if (!response.ok) {
         const errorData = await response.json();
         console.error(`Failed to load bot configuration. Status: ${response.status}, Response:`, errorData);
+        
+        if (response.status === 404) {
+          showDefaultErrorMessage(`Bot with ID "${botId}" was not found. Please check if the ID is correct.`);
+          
+          if (errorData.availableBots && errorData.availableBots.length > 0) {
+            console.log('Available bots:', errorData.availableBots);
+          }
+        } else {
+          showDefaultErrorMessage("Failed to load bot configuration. Please try again later.");
+        }
         return;
       }
       
@@ -249,10 +274,24 @@
         }
       } else {
         console.error('Bot data not found in API response:', data);
+        showDefaultErrorMessage("Invalid bot configuration data received.");
       }
     } catch (error) {
       console.error('Error fetching bot configuration:', error);
       console.log('Using default bot info due to fetch error');
+      showDefaultErrorMessage("Failed to load bot configuration due to a network error.");
+    }
+  }
+
+  // Helper function to show error messages in the chat panel
+  function showDefaultErrorMessage(message) {
+    messages = [{
+      role: 'bot',
+      content: message
+    }];
+    
+    if (panel) {
+      renderMessages();
     }
   }
 
@@ -459,6 +498,36 @@
 
   // Add click event to the button
   button.addEventListener('click', toggleWidget);
+  
+  // Initialize global cw object for API access
+  if (typeof window.cw === 'function') {
+    const oldCw = window.cw;
+    window.cw = function() {
+      if (arguments.length >= 2 && arguments[0] === 'init' && arguments[1].botId) {
+        botId = arguments[1].botId;
+        console.log('Bot ID set via cw("init") call:', botId);
+        fetchBotConfig();
+      }
+      return oldCw.apply(this, arguments);
+    };
+    
+    // Process any queued commands
+    if (window.cw.q) {
+      for (let i = 0; i < window.cw.q.length; i++) {
+        window.cw.apply(window, window.cw.q[i]);
+      }
+    }
+  } else {
+    window.cw = function() {
+      if (!window.cw.q) window.cw.q = [];
+      window.cw.q.push(arguments);
+      if (arguments.length >= 2 && arguments[0] === 'init' && arguments[1].botId) {
+        botId = arguments[1].botId;
+        console.log('Bot ID set via cw("init") call:', botId);
+        fetchBotConfig();
+      }
+    };
+  }
   
   // Fetch bot configuration on initialization
   fetchBotConfig();
