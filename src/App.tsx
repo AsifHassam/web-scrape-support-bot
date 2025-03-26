@@ -13,6 +13,7 @@ import ScrapedSite from "@/pages/ScrapedSite";
 import Auth from "@/pages/Auth";
 import Profile from "@/pages/Profile";
 import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
 import Index from "@/pages/Index";
 import Pricing from "@/pages/Pricing";
 import Contact from "@/pages/Contact";
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/preview" element={<ScrapedSite />} />
             <Route path="/scraped-site" element={<ScrapedSite />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             
             <Route
               path="/dashboard"
