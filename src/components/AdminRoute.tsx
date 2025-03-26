@@ -17,7 +17,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     
     const checkAdminStatus = () => {
       // First check if the user is logged in with the admin email
-      const isAdminEmail = user?.email === "admin@example.com";
+      const isAdminEmail = user?.email === "hello@liorra.io";
       
       // Then check if admin is authenticated via localStorage
       const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";

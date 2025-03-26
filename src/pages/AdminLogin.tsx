@@ -44,7 +44,7 @@ const AdminLogin = () => {
         // First ensure the user is logged in to Supabase with admin account
         if (!user) {
           console.log("Attempting to authenticate with Supabase");
-          const { error } = await signIn("admin@example.com", "Liorra2025!");
+          const { error } = await signIn("hello@liorra.io", "Liorra2025!");
           
           if (error) {
             console.error("Failed to authenticate with Supabase:", error);
@@ -54,7 +54,7 @@ const AdminLogin = () => {
           }
         } else {
           // Check if current user is admin
-          if (user.email !== "admin@example.com") {
+          if (user.email !== "hello@liorra.io") {
             setError("Current logged in user is not an admin. Please log out first.");
             setLoading(false);
             return;
@@ -188,7 +188,7 @@ const AdminLogin = () => {
           
           <div className="mt-6 text-center text-sm">
             <p className="text-gray-600 dark:text-gray-400">
-              Note: You need to first create a Supabase account with email "admin@example.com" and password "Liorra2025!"
+              Note: You need to first create a Supabase account with email "hello@liorra.io" and password "Liorra2025!"
             </p>
           </div>
         </div>
