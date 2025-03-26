@@ -1,8 +1,9 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useEffect } from "react";
 
 interface ConversationHeaderProps {
   botName: string;
@@ -10,6 +11,12 @@ interface ConversationHeaderProps {
 
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({ botName }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow">

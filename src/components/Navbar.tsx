@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,18 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollProgress = useScrollProgress();
   const { user } = useAuth();
+  const location = useLocation();
   
   useEffect(() => {
     setIsScrolled(scrollProgress > 0.01);
   }, [scrollProgress]);
+  
+  // Effect to scroll to top when routing to pricing page
+  useEffect(() => {
+    if (location.pathname === '/pricing') {
+      window.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
   
   const handleNavLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
