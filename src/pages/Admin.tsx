@@ -1,52 +1,15 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  User, 
-  Users, 
-  UserPlus, 
-  UserX, 
-  Edit, 
-  Trash, 
-  Check, 
-  Ban,
-  CreditCard,
-  Search
-} from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+
+// Components
+import AdminHeader from "@/components/admin/AdminHeader";
+import UserTable from "@/components/admin/UserTable";
+import AddUserDialog from "@/components/admin/AddUserDialog";
+import DeleteUserDialog from "@/components/admin/DeleteUserDialog";
+import UserSearchBar from "@/components/admin/UserSearchBar";
 
 interface UserData {
   id: string;
@@ -57,34 +20,14 @@ interface UserData {
   payment_status: 'FREE' | 'PAID' | 'TRIAL';
 }
 
-const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" })
-    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
-    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
-    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 const Admin = () => {
   const { signOut } = useAuth();
-  const navigate = useNavigate();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [openAddDialog, setOpenAddDialog] = useState<boolean>(false);
-  const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
 
   useEffect(() => {
     fetchUsers();
@@ -179,7 +122,7 @@ const Admin = () => {
     }
   };
 
-  const handleAddUser = async (data: FormValues) => {
+  const handleAddUser = async (data: { email: string; password: string }) => {
     try {
       // Instead of creating a user with admin API, use sign up
       const { error } = await supabase.auth.signUp({
@@ -196,7 +139,6 @@ const Admin = () => {
       
       toast.success(`User added: ${data.email}`);
       setOpenAddDialog(false);
-      form.reset();
       fetchUsers();
     } catch (error: any) {
       toast.error("Failed to add user: " + error.message);
@@ -287,22 +229,14 @@ const Admin = () => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleUserDeleteClick = (user: UserData) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
-              Dashboard
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => signOut()}>
-              Log Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader title="Admin Dashboard" onSignOut={signOut} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
@@ -312,64 +246,15 @@ const Admin = () => {
                 User Management
               </h2>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search users..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Dialog open={openAddDialog} onOpenChange={setOpenAddDialog}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Add User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New User</DialogTitle>
-                      <DialogDescription>
-                        Create a new user account.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input placeholder="user@example.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="••••••••" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <DialogFooter>
-                          <Button type="submit">Add User</Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+                <UserSearchBar 
+                  searchTerm={searchTerm} 
+                  onSearchChange={setSearchTerm} 
+                />
+                <AddUserDialog
+                  open={openAddDialog}
+                  onOpenChange={setOpenAddDialog}
+                  onAddUser={handleAddUser}
+                />
               </div>
             </div>
             
@@ -382,107 +267,22 @@ const Admin = () => {
                 <p className="text-gray-500 dark:text-gray-400">No users found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.email}</TableCell>
-                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {user.last_sign_in_at 
-                            ? new Date(user.last_sign_in_at).toLocaleDateString() 
-                            : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.status === 'ACTIVE' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                          }`}>
-                            {user.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="relative inline-block text-left">
-                            <select
-                              value={user.payment_status}
-                              onChange={(e) => updatePaymentStatus(
-                                user.id, 
-                                e.target.value as 'FREE' | 'PAID' | 'TRIAL'
-                              )}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1 px-2"
-                            >
-                              <option value="FREE">FREE</option>
-                              <option value="TRIAL">TRIAL</option>
-                              <option value="PAID">PAID</option>
-                            </select>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleBlockUser(user.id, user.status)}
-                            >
-                              {user.status === 'ACTIVE' ? (
-                                <Ban className="h-4 w-4" />
-                              ) : (
-                                <Check className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <UserTable
+                users={filteredUsers}
+                onBlockUser={handleBlockUser}
+                onDeleteClick={handleUserDeleteClick}
+                updatePaymentStatus={updatePaymentStatus}
+              />
             )}
           </div>
         </div>
       </main>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this user? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex space-x-2 justify-end">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteUser}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteUserDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleDeleteUser}
+      />
     </div>
   );
 };
