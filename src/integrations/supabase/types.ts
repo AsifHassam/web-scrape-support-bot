@@ -334,7 +334,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_bot_by_id_string: {
+        Args: {
+          id_param: string
+        }
+        Returns: {
+          id: string
+          name: string
+          user_id: string
+          company: string
+          bot_type: string
+          created_at: string
+          updated_at: string
+          primary_color: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -67,57 +67,42 @@ serve(async (req) => {
       console.error('Error listing bots:', listError);
     }
 
-    // Fetch bot details from Supabase - use non-strict equality to handle string UUID vs UUID object
+    // Try first with a standard query
     const { data: bot, error } = await supabase
       .from('bots')
       .select('*')
-      .filter('id', 'eq', botId.trim())
-      .limit(1)
-      .single();
+      .eq('id', botId.trim())
+      .maybeSingle();
 
-    if (error) {
-      console.error('Error fetching bot configuration:', error);
+    if (error || !bot) {
+      console.error('Standard query failed:', error);
       
-      // Try again with a direct query to check if the issue is with UUID format
+      // Try using the string comparison function
+      console.log('Attempting direct string query with ID:', botId.trim());
       const { data: directBot, error: directError } = await supabase
         .rpc('get_bot_by_id_string', { id_param: botId.trim() })
         .maybeSingle();
         
       if (directError || !directBot) {
-        console.error('Direct query also failed:', directError);
+        console.error('Direct string query also failed:', directError);
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to fetch bot configuration', 
-            details: error.message,
+            error: 'Bot not found', 
+            botIdRequested: botId,
             availableBots: allBots?.map(b => ({ id: b.id, name: b.name })) || []
           }),
           { 
-            status: 500, 
+            status: 404, 
             headers: corsHeaders 
           }
         );
       }
       
-      console.log('Found bot via direct query:', directBot);
+      console.log('Found bot via direct string query:', directBot);
       return new Response(
         JSON.stringify({ bot: directBot }),
         { 
           status: 200, 
-          headers: corsHeaders 
-        }
-      );
-    }
-
-    if (!bot) {
-      console.log('Bot not found for ID:', botId);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Bot not found',
-          botIdRequested: botId,
-          availableBots: allBots?.map(b => ({ id: b.id, name: b.name })) || []
-        }),
-        { 
-          status: 404, 
           headers: corsHeaders 
         }
       );
