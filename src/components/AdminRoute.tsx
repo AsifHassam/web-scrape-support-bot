@@ -1,4 +1,3 @@
-
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -20,7 +19,17 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       // This provides true admin privileges to this specific account
       const isAdminEmail = user?.email === "hello@liorra.io";
       
-      // Then check if admin is authenticated via localStorage
+      if (isAdminEmail) {
+        console.log("AdminRoute: User is admin by email (hello@liorra.io)");
+        // If the user is hello@liorra.io, they are always an admin
+        localStorage.setItem("adminAuthenticated", "true");
+        localStorage.setItem("adminAuthTime", Date.now().toString());
+        setIsAdmin(true);
+        setCheckingAdmin(false);
+        return;
+      }
+      
+      // Otherwise, check if admin is authenticated via localStorage
       const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
       
       // Add a time-based check to require re-authentication after 8 hours
@@ -28,7 +37,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       const now = Date.now();
       const eightHoursMs = 8 * 60 * 60 * 1000;
       
-      let isStillValid = (adminAuthenticated && isAdminEmail);
+      let isStillValid = adminAuthenticated;
       
       if (adminAuthTime) {
         const authTimeMs = parseInt(adminAuthTime);

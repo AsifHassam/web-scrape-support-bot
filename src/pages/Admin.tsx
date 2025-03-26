@@ -93,27 +93,33 @@ const Admin = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Query both the user_profiles and users_metadata tables to get complete user information
+      console.log("Fetching users from user_profiles and users_metadata tables");
       
-      // 1. Get all users from the auth.users table via user_profiles
+      // 1. Get user profile data
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, display_name, avatar_url');
+        .select('id, display_name, avatar_url, updated_at');
       
       if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
         throw profilesError;
       }
       
-      // 2. Get all users' metadata
+      console.log("Fetched profiles:", profilesData?.length || 0);
+      
+      // 2. Get user metadata
       const { data: metadataData, error: metadataError } = await supabase
         .from('users_metadata')
         .select('*');
       
       if (metadataError) {
+        console.error("Error fetching metadata:", metadataError);
         throw metadataError;
       }
       
-      // 3. Create a map of profile data by id for easy lookup
+      console.log("Fetched metadata:", metadataData?.length || 0);
+      
+      // 3. Create a map of profiles by id for easy lookup
       const profilesMap = new Map();
       profilesData?.forEach(profile => {
         profilesMap.set(profile.id, profile);
@@ -122,20 +128,22 @@ const Admin = () => {
       // 4. Combine profile data with metadata
       const combinedUsers: UserData[] = metadataData?.map(metadata => {
         const profile = profilesMap.get(metadata.id);
+        
         return {
           id: metadata.id,
           email: profile?.display_name || `user-${metadata.id.substring(0, 8)}`,
           created_at: metadata.created_at,
-          last_sign_in_at: metadata.updated_at || null,
+          last_sign_in_at: profile?.updated_at || null,
           status: metadata.status as 'ACTIVE' | 'BLOCKED',
           payment_status: metadata.payment_status as 'FREE' | 'PAID' | 'TRIAL'
         };
       }) || [];
       
+      console.log("Combined users data:", combinedUsers.length);
       setUsers(combinedUsers);
     } catch (error: any) {
+      console.error("Error in fetchUsers:", error);
       toast.error("Failed to fetch users: " + error.message);
-      console.error("Error fetching users:", error);
       
       // Fallback to mock data if there's an error
       const mockUsers: UserData[] = [
