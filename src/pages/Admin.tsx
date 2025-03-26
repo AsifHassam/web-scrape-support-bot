@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,51 @@ const Admin = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      // Fetch users from Supabase auth.users
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      // Fetch metadata for these users
+      const { data: metadataData, error: metadataError } = await supabase
+        .from('users_metadata')
+        .select('*');
+      
+      if (metadataError) {
+        throw metadataError;
+      }
+      
+      // Create a map of user metadata by user ID for easy lookup
+      const metadataMap = new Map();
+      metadataData?.forEach(metadata => {
+        metadataMap.set(metadata.id, metadata);
+      });
+      
+      // Combine auth users with their metadata
+      const combinedUsers = authUsers?.users.map(user => {
+        const metadata = metadataMap.get(user.id) || { 
+          status: 'ACTIVE', 
+          payment_status: 'FREE'
+        };
+        
+        return {
+          id: user.id,
+          email: user.email || 'No email',
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at,
+          status: metadata.status as 'ACTIVE' | 'BLOCKED',
+          payment_status: metadata.payment_status as 'FREE' | 'PAID' | 'TRIAL'
+        };
+      });
+      
+      setUsers(combinedUsers || []);
+    } catch (error: any) {
+      toast.error("Failed to fetch users: " + error.message);
+      console.error("Error fetching users:", error);
+      
+      // Fallback to mock data if there's an error
       const mockUsers: UserData[] = [
         {
           id: "1",
@@ -120,9 +166,6 @@ const Admin = () => {
       ];
       
       setUsers(mockUsers);
-    } catch (error: any) {
-      toast.error("Failed to fetch users: " + error.message);
-      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
@@ -130,6 +173,19 @@ const Admin = () => {
 
   const handleAddUser = async (data: FormValues) => {
     try {
+      // Create a new user in Supabase
+      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true
+      });
+      
+      if (userError) {
+        throw userError;
+      }
+      
+      // The users_metadata entry should be created automatically via our trigger
+      
       toast.success(`User added: ${data.email}`);
       setOpenAddDialog(false);
       form.reset();
@@ -144,6 +200,27 @@ const Admin = () => {
       const newStatus = currentStatus === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
       const actionText = newStatus === 'BLOCKED' ? 'blocked' : 'unblocked';
       
+      // Update the user status in users_metadata
+      const { error } = await supabase
+        .from('users_metadata')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Optionally, if you want to actually disable the user in auth:
+      if (newStatus === 'BLOCKED') {
+        await supabase.auth.admin.updateUserById(userId, { ban_duration: '87600h' }); // 10 years
+      } else {
+        await supabase.auth.admin.updateUserById(userId, { ban_duration: '0' });
+      }
+      
+      // Update the local state
       setUsers(users.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
       ));
@@ -159,6 +236,15 @@ const Admin = () => {
     if (!selectedUser) return;
     
     try {
+      // Delete the user from Supabase Auth
+      const { error } = await supabase.auth.admin.deleteUser(selectedUser.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // The users_metadata should be automatically deleted via cascade
+      
       setUsers(users.filter(user => user.id !== selectedUser.id));
       toast.success("User deleted successfully");
       setDeleteDialogOpen(false);
@@ -169,6 +255,20 @@ const Admin = () => {
 
   const updatePaymentStatus = async (userId: string, newStatus: 'FREE' | 'PAID' | 'TRIAL') => {
     try {
+      // Update the payment status in users_metadata
+      const { error } = await supabase
+        .from('users_metadata')
+        .update({ 
+          payment_status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
       setUsers(users.map(user => 
         user.id === userId ? { ...user, payment_status: newStatus } : user
       ));
