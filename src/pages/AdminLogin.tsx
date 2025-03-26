@@ -7,7 +7,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
   const [username, setUsername] = useState<string>("");
@@ -15,7 +14,7 @@ const AdminLogin = () => {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
 
   // Check if user is already logged in as admin
   useEffect(() => {
@@ -38,20 +37,25 @@ const AdminLogin = () => {
     setError("");
 
     try {
+      // Check if the admin credentials are valid
       if (username === "admin" && password === "Liorra2025!") {
-        console.log("Admin credentials valid, setting adminAuthenticated to true");
+        console.log("Admin credentials valid");
         
-        // First ensure the user is logged in to Supabase
+        // First ensure the user is logged in to Supabase with admin account
         if (!user) {
-          // We need a valid Supabase user first
-          const { error } = await supabase.auth.signInWithPassword({
-            email: "admin@example.com",
-            password: "Liorra2025!"
-          });
+          console.log("Attempting to authenticate with Supabase");
+          const { error } = await signIn("admin@example.com", "Liorra2025!");
           
           if (error) {
             console.error("Failed to authenticate with Supabase:", error);
             setError("Authentication error: " + error.message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Check if current user is admin
+          if (user.email !== "admin@example.com") {
+            setError("Current logged in user is not an admin. Please log out first.");
             setLoading(false);
             return;
           }
@@ -69,7 +73,7 @@ const AdminLogin = () => {
         setTimeout(() => {
           console.log("Now redirecting to admin dashboard");
           navigate("/admin", { replace: true });
-        }, 1000);
+        }, 1500);
       } else {
         setError("Invalid admin credentials");
       }
@@ -180,6 +184,12 @@ const AdminLogin = () => {
             >
               Back to Home
             </Button>
+          </div>
+          
+          <div className="mt-6 text-center text-sm">
+            <p className="text-gray-600 dark:text-gray-400">
+              Note: You need to first create a Supabase account with email "admin@example.com" and password "Liorra2025!"
+            </p>
           </div>
         </div>
       </div>
