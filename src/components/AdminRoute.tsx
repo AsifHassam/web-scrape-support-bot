@@ -13,11 +13,13 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const [checkingAdmin, setCheckingAdmin] = useState<boolean>(true);
   
   useEffect(() => {
+    console.log("AdminRoute: checking admin status");
     // Check if admin is authenticated via localStorage
     const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
+    console.log("AdminRoute: adminAuthenticated =", adminAuthenticated);
     setIsAdmin(adminAuthenticated);
     setCheckingAdmin(false);
-  }, [user]); // Add user as a dependency to re-check when auth state changes
+  }, [user]); // Re-check when auth state changes
 
   // Show loading state while checking authentication
   if (loading || checkingAdmin) {
@@ -30,15 +32,18 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   
   // Check if user is authenticated first
   if (!user) {
+    console.log("AdminRoute: user not authenticated, redirecting to admin login");
     return <Navigate to="/admin/login" replace />;
   }
 
   // If not admin, redirect to admin login
   if (!isAdmin) {
+    console.log("AdminRoute: user not admin, redirecting to admin login");
     return <Navigate to="/admin/login" replace />;
   }
   
   // Render children if authenticated and admin
+  console.log("AdminRoute: user is admin, rendering admin dashboard");
   return <>{children}</>;
 };
 

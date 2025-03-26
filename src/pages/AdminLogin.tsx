@@ -34,7 +34,12 @@ const AdminLogin = () => {
         // Store admin status in localStorage
         localStorage.setItem("adminAuthenticated", "true");
         toast.success("Admin login successful");
-        navigate("/admin");
+        
+        // Force immediate redirect to admin dashboard
+        setTimeout(() => {
+          console.log("Redirecting to admin dashboard...");
+          navigate("/admin", { replace: true });
+        }, 100); // Small delay to ensure toast is visible
       } else {
         setError("Invalid admin credentials");
       }
