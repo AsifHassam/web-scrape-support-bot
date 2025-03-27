@@ -50,28 +50,43 @@ export type Database = {
       bots: {
         Row: {
           bot_type: string | null
+          chat_bubble_style: string | null
           company: string | null
           created_at: string
+          font_family: string | null
           id: string
           name: string
+          primary_color: string | null
+          show_powered_by: boolean | null
+          status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           bot_type?: string | null
+          chat_bubble_style?: string | null
           company?: string | null
           created_at?: string
+          font_family?: string | null
           id?: string
           name: string
+          primary_color?: string | null
+          show_powered_by?: boolean | null
+          status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           bot_type?: string | null
+          chat_bubble_style?: string | null
           company?: string | null
           created_at?: string
+          font_family?: string | null
           id?: string
           name?: string
+          primary_color?: string | null
+          show_powered_by?: boolean | null
+          status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -353,6 +368,36 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          access_level: string
+          created_at: string | null
+          id: string
+          member_id: string
+          owner_id: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string | null
+          id?: string
+          member_id: string
+          owner_id: string
+          role?: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_level?: string
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          owner_id?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           bot_purpose: string | null
@@ -403,30 +448,45 @@ export type Database = {
       }
       users_metadata: {
         Row: {
+          conversations_used: number | null
           created_at: string
           customer_id: string | null
           has_payment_method: boolean
           id: string
+          live_bots_count: number | null
+          messages_used: number | null
           payment_status: string
           status: string
+          subscription_tier: string | null
+          team_members_count: number | null
           updated_at: string
         }
         Insert: {
+          conversations_used?: number | null
           created_at?: string
           customer_id?: string | null
           has_payment_method?: boolean
           id: string
+          live_bots_count?: number | null
+          messages_used?: number | null
           payment_status?: string
           status?: string
+          subscription_tier?: string | null
+          team_members_count?: number | null
           updated_at?: string
         }
         Update: {
+          conversations_used?: number | null
           created_at?: string
           customer_id?: string | null
           has_payment_method?: boolean
           id?: string
+          live_bots_count?: number | null
+          messages_used?: number | null
           payment_status?: string
           status?: string
+          subscription_tier?: string | null
+          team_members_count?: number | null
           updated_at?: string
         }
         Relationships: []
