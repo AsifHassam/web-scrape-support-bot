@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import BillingTab from "@/components/billing/BillingTab";
 
 type UserProfile = {
   id: string;
@@ -51,7 +51,6 @@ const Profile = () => {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   
-  // Password change states
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -184,6 +183,7 @@ const Profile = () => {
             <TabsList className="w-full mb-8">
               <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
               <TabsTrigger value="account" className="flex-1">Account Settings</TabsTrigger>
+              <TabsTrigger value="billing" className="flex-1">Billing</TabsTrigger>
             </TabsList>
             
             <TabsContent value="profile">
@@ -340,6 +340,10 @@ const Profile = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="billing">
+              <BillingTab />
             </TabsContent>
           </Tabs>
         )}
