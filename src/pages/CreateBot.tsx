@@ -1,732 +1,647 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Save, PlusCircle, ArrowRight, Upload, Globe } from "lucide-react";
-import { SubscriptionTier } from "@/lib/types/billing";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, ArrowRight, FileUp, Globe, Trash2, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { useScrapeWebsite } from "@/hooks/useScrapeWebsite";
 import ChatbotEmulator from "@/components/ChatbotEmulator";
-import useScrapeWebsite from "@/hooks/useScrapeWebsite";
-import ScrapeStatus from "@/components/ScrapeStatus";
-import generateEmbedCode from "@/utils/generateEmbedCode";
+import { initialScrapeProgress } from "@/utils/scraper";
+import { normalizeUrl, isValidUrl } from '@/utils/urlUtils';
+import BotTypeSelector from '@/components/BotTypeSelector';
+import PaymentGateway from "@/components/PaymentGateway";
+import generateEmbedCode from '@/utils/generateEmbedCode';
 
-// Define the allowed knowledge source types as a type
-type KnowledgeSourceType = "website" | "text" | "file";
+type BotType = 
+  | 'educational' 
+  | 'health' 
+  | 'customer_support' 
+  | 'it_support' 
+  | 'ecommerce' 
+  | 'hr' 
+  | 'personal' 
+  | 'lead_generation' 
+  | 'other';
 
-interface KnowledgeSource {
-  type: KnowledgeSourceType;
-  content: string;
+interface BotFormData {
+  name: string;
+  company: string;
+  botType: BotType | '';
+  knowledgeSources: {
+    useWebsite: boolean;
+    websiteUrl: string;
+    usePdfs: boolean;
+    pdfFiles: File[];
+  };
 }
 
-// Define the steps for bot creation
-const steps = [
-  { id: "knowledge", title: "Knowledge Sources" },
-  { id: "basics", title: "Bot Information" },
-  { id: "review", title: "Preview & Test" },
-  { id: "payment", title: "Payment & Embed" },
-];
-
-const MAX_BOTS = {
-  TRIAL: 1,
-  STARTER: 3,
-  PRO: 10,
-  ENTERPRISE: 100
-};
-
 const CreateBot = () => {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState<BotFormData>({
+    name: "",
+    company: "",
+    botType: "",
+    knowledgeSources: {
+      useWebsite: true,
+      websiteUrl: "",
+      usePdfs: false,
+      pdfFiles: [],
+    },
+  });
+  const [embedCode, setEmbedCode] = useState("");
+  const [botId, setBotId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [urlScraped, setUrlScraped] = useState(false);
+  const { scrapeProgress, startScraping } = useScrapeWebsite();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [name, setName] = useState("");
-  const [company, setCompany] = useState("");
-  const [botType, setBotType] = useState("");
-  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([
-    { type: "website", content: "" },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [isLive, setIsLive] = useState(false);
-  const [userBotCount, setUserBotCount] = useState(0);
-  const [botId, setBotId] = useState<string | null>(null);
-  const [embedCode, setEmbedCode] = useState("");
-  
-  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('TRIAL');
-  const { scrapeProgress, startScraping } = useScrapeWebsite();
-  const [scrapeUrl, setScrapeUrl] = useState("");
-  const [isScraping, setIsScraping] = useState(false);
-  
-  // Fetch user's existing bot count
+
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchUserBots = async () => {
-      try {
-        const { data, error, count } = await supabase
-          .from("bots")
-          .select("*", { count: 'exact' })
-          .eq("user_id", user.id);
-          
-        if (error) throw error;
-        
-        setUserBotCount(count || 0);
-      } catch (error) {
-        console.error("Error fetching user bots:", error);
-      }
-    };
-    
-    fetchUserBots();
-  }, [user]);
-  
-  // Check if user reached their bot limit
-  const hasReachedBotLimit = () => {
-    return userBotCount >= MAX_BOTS[subscriptionTier];
-  };
-  
-  const handleAddKnowledgeSource = () => {
-    setKnowledgeSources([...knowledgeSources, { type: "website", content: "" }]);
-  };
+    if (botId) {
+      const code = generateEmbedCode(botId);
+      setEmbedCode(code);
+    }
+  }, [botId]);
 
-  const handleKnowledgeSourceChange = (
-    index: number,
-    type: KnowledgeSourceType,
-    content: string
-  ) => {
-    const updatedSources = [...knowledgeSources];
-    updatedSources[index] = { type, content };
-    setKnowledgeSources(updatedSources);
-  };
-
-  const handleRemoveKnowledgeSource = (index: number) => {
-    const updatedSources = [...knowledgeSources];
-    updatedSources.splice(index, 1);
-    setKnowledgeSources(updatedSources);
-  };
-  
   const handleScrapeWebsite = async () => {
-    if (!scrapeUrl) {
-      toast.error("Please enter a URL to scrape");
+    if (!formData.knowledgeSources.websiteUrl) {
+      toast.error("Please enter a website URL");
       return;
     }
+
+    const normalizedUrl = normalizeUrl(formData.knowledgeSources.websiteUrl);
     
-    setIsScraping(true);
-    
-    try {
-      const result = await startScraping(scrapeUrl);
-      
-      if (result && result.status === "complete") {
-        // Add the scraped website as a knowledge source
-        setKnowledgeSources(prev => [
-          ...prev,
-          { type: "website", content: scrapeUrl }
-        ]);
-        
-        toast.success("Website scraped successfully!");
-      }
-    } catch (error) {
-      console.error("Error scraping website:", error);
-      toast.error("Failed to scrape website");
-    } finally {
-      setIsScraping(false);
+    if (!isValidUrl(normalizedUrl)) {
+      toast.error("Please enter a valid website URL");
+      return;
     }
-  };
 
-  const handleSubmit = async () => {
-    if (!user) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Create the bot
-      const { data: botData, error: botError } = await supabase
-        .from("bots")
-        .insert([
-          {
-            user_id: user.id,
-            name,
-            company,
-            bot_type: botType,
-            is_live: isLive,
-          },
-        ])
-        .select()
-        .single();
-
-      if (botError) throw botError;
-
-      // Store the bot ID for the embed code
-      setBotId(botData.id);
-      
-      // Generate embed code
-      setEmbedCode(generateEmbedCode(botData.id));
-
-      // Add knowledge sources
-      for (const source of knowledgeSources) {
-        const { error: sourceError } = await supabase
-          .from("knowledge_sources")
-          .insert([
-            {
-              bot_id: botData.id,
-              source_type: source.type,
-              content: source.content,
-            },
-          ]);
-
-        if (sourceError) throw sourceError;
-      }
-
-      toast.success("Bot created successfully");
-      
-      // Move to final step instead of navigating away
-      setCurrentStep(steps.length - 1);
+      await startScraping(normalizedUrl);
+      setUrlScraped(true);
+      toast.success("Website scraped successfully!");
     } catch (error: any) {
-      console.error("Error creating bot:", error);
-      toast.error("Failed to create bot: " + error.message);
+      toast.error("Failed to scrape website: " + error.message);
     } finally {
       setLoading(false);
     }
   };
-  
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchSubscriptionStatus = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("users_metadata")
-          .select("payment_status")
-          .eq("id", user.id)
-          .maybeSingle();
-          
-        if (error) throw error;
-        
-        if (data) {
-          const status = data.payment_status.toUpperCase();
-          if (status === 'PAID' || status === 'PRO') {
-            setSubscriptionTier('PRO');
-          } else if (status === 'STARTER') {
-            setSubscriptionTier('STARTER');
-          } else if (status === 'ENTERPRISE') {
-            setSubscriptionTier('ENTERPRISE');
-          } else {
-            setSubscriptionTier('TRIAL');
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching subscription:", error);
-        setSubscriptionTier('TRIAL');
-      }
-    };
-    
-    fetchSubscriptionStatus();
-  }, [user]);
 
-  const nextStep = () => {
-    if (currentStep === 2 && !botId) {
-      // If we're on the review step and haven't created the bot yet, create it
-      handleSubmit();
-    } else {
-      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFormData({
+        ...formData,
+        knowledgeSources: {
+          ...formData.knowledgeSources,
+          pdfFiles: [...formData.knowledgeSources.pdfFiles, ...Array.from(e.target.files)],
+        }
+      });
     }
   };
 
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
-  };
-  
-  const finishAndGoToDashboard = () => {
-    navigate("/dashboard");
-  };
-
-  // Mock knowledge for the emulator
-  const mockKnowledge = {
-    status: "complete" as const,
-    results: knowledgeSources.map((source, index) => ({
-      url: source.type === "website" ? source.content : `https://example.com/doc${index}`,
-      title: source.type === "website" ? `Website ${index + 1}` : `Document ${index + 1}`,
-      content: source.type === "text" ? source.content : `Sample content from ${source.type} ${index + 1}`,
-    })),
-    totalUrls: knowledgeSources.length,
-    processedUrls: knowledgeSources.length,
-    progress: 1,
-    error: undefined,
-    websiteUrl: knowledgeSources.find(source => source.type === "website")?.content || "https://example.com",
-    content: undefined
+  const handleRemoveFile = (index: number) => {
+    const updatedFiles = [...formData.knowledgeSources.pdfFiles];
+    updatedFiles.splice(index, 1);
+    setFormData({
+      ...formData,
+      knowledgeSources: {
+        ...formData.knowledgeSources,
+        pdfFiles: updatedFiles
+      }
+    });
   };
 
-  const copyEmbedCode = () => {
-    if (!embedCode) return;
+  const validateStep = () => {
+    if (step === 1) {
+      if (formData.knowledgeSources.useWebsite && !formData.knowledgeSources.websiteUrl) {
+        toast.error("Please enter a website URL or uncheck the website option");
+        return false;
+      }
+      
+      if (formData.knowledgeSources.useWebsite && !urlScraped) {
+        toast.error("Please scrape the website first");
+        return false;
+      }
+      
+      if (formData.knowledgeSources.usePdfs && formData.knowledgeSources.pdfFiles.length === 0) {
+        toast.error("Please upload at least one PDF file or uncheck the PDF option");
+        return false;
+      }
+      
+      if (!formData.knowledgeSources.useWebsite && !formData.knowledgeSources.usePdfs) {
+        toast.error("Please select at least one knowledge source");
+        return false;
+      }
+    } else if (step === 2) {
+      if (!formData.name) {
+        toast.error("Please enter a bot name");
+        return false;
+      }
+    }
     
-    navigator.clipboard.writeText(embedCode)
-      .then(() => toast.success("Embed code copied to clipboard"))
-      .catch(() => toast.error("Failed to copy embed code"));
+    return true;
+  };
+
+  const handleNext = async () => {
+    if (!validateStep()) return;
+    
+    if (step === 3) {
+      setLoading(true);
+      try {
+        // Create the bot first
+        const { data: botData, error: botError } = await supabase
+          .from("bots")
+          .insert({
+            name: formData.name,
+            company: formData.company,
+            bot_type: formData.botType,
+            user_id: user?.id,
+          })
+          .select()
+          .single();
+
+        if (botError) throw botError;
+        
+        const newBotId = botData.id;
+        setBotId(newBotId);
+
+        // Add knowledge sources for the newly created bot
+        const knowledgeSourcesToAdd = [];
+        
+        if (formData.knowledgeSources.useWebsite && formData.knowledgeSources.websiteUrl) {
+          knowledgeSourcesToAdd.push({
+            bot_id: newBotId,
+            source_type: "website",
+            content: formData.knowledgeSources.websiteUrl,
+          });
+        }
+        
+        if (formData.knowledgeSources.usePdfs && formData.knowledgeSources.pdfFiles.length > 0) {
+          // Add simple metadata about PDF files since actual content would need further processing
+          knowledgeSourcesToAdd.push({
+            bot_id: newBotId,
+            source_type: "document",
+            content: `${formData.knowledgeSources.pdfFiles.length} PDF files uploaded`,
+          });
+        }
+        
+        if (knowledgeSourcesToAdd.length > 0) {
+          console.log("Adding knowledge sources:", knowledgeSourcesToAdd);
+          const { error: sourceError } = await supabase
+            .from("knowledge_sources")
+            .insert(knowledgeSourcesToAdd);
+
+          if (sourceError) {
+            console.error("Error adding knowledge sources:", sourceError);
+            toast.error("Warning: Bot created but failed to add knowledge sources. You can add them later.");
+          }
+        }
+
+        toast.success("Chatbot created successfully!");
+        setStep(4);
+      } catch (error: any) {
+        console.error("Error details:", error);
+        toast.error("Error creating bot: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setStep(step + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    setStep(step - 1);
+  };
+
+  const handlePaymentComplete = () => {
+    setStep(5);
+  };
+
+  const handlePaymentCancel = () => {
+    setStep(3);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(embedCode);
+    toast.success("Code copied to clipboard!");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Create New Bot
-            </h1>
-          </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      <div className="w-full lg:w-7/12 p-8">
+        <div className="flex items-center space-x-4 mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+          </Button>
+
+          <div className="h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
+
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-5 h-5 text-white"
+              >
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="17" x2="12" y2="17"></line>
+              </svg>
+            </span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-white">Chatwise</span>
+          </Link>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left side - Step form */}
-          <div className="lg:w-1/2">
-            {/* Step indicator */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                {steps.map((step, idx) => (
-                  <div key={step.id} className="flex items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        idx <= currentStep
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {idx + 1}
-                    </div>
-                    {idx < steps.length - 1 && (
-                      <div
-                        className={`h-1 w-16 ${
-                          idx < currentStep
-                            ? "bg-blue-600"
-                            : "bg-gray-200 dark:bg-gray-700"
-                        }`}
-                      ></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <h2 className="text-xl font-semibold">
-                {steps[currentStep].title}
-              </h2>
-            </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          {step === 5 ? "Your Bot is Ready!" : "Create New Chatbot"}
+        </h1>
 
-            {currentStep === 0 && (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Knowledge Sources</CardTitle>
-                    <CardDescription>
-                      Add websites, text, or files to train your bot.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Scrape Website Section */}
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-8 dark:bg-gray-700">
+          <div
+            className="bg-primary h-2.5 rounded-full transition-all duration-300"
+            style={{ width: `${(step / 5) * 100}%` }}
+          ></div>
+        </div>
+
+        {step === 1 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Step 1: Set Up Knowledge Base
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Choose how you want to feed your chatbot with information
+            </p>
+
+            <div className="space-y-6">
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="useWebsite" 
+                  checked={formData.knowledgeSources.useWebsite}
+                  onCheckedChange={(checked) => 
+                    setFormData({
+                      ...formData,
+                      knowledgeSources: {
+                        ...formData.knowledgeSources,
+                        useWebsite: checked as boolean
+                      }
+                    })
+                  }
+                />
+                <div className="space-y-4 flex-1">
+                  <Label 
+                    htmlFor="useWebsite" 
+                    className="font-medium flex items-center cursor-pointer"
+                  >
+                    <Globe className="mr-2 h-5 w-5 text-primary" />
+                    Website URL
+                  </Label>
+                  
+                  {formData.knowledgeSources.useWebsite && (
                     <div className="space-y-4">
-                      <Label>Scrape a Website</Label>
-                      <div className="flex space-x-2">
-                        <Input
-                          placeholder="Enter website URL (e.g., example.com)"
-                          value={scrapeUrl}
-                          onChange={(e) => setScrapeUrl(e.target.value)}
-                          className="flex-1"
-                          disabled={isScraping}
-                        />
-                        <Button 
-                          onClick={handleScrapeWebsite} 
-                          disabled={isScraping || !scrapeUrl}
-                          className="whitespace-nowrap"
-                        >
-                          <Globe className="mr-2 h-4 w-4" />
-                          {isScraping ? "Scraping..." : "Scrape"}
-                        </Button>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            id="websiteUrl"
+                            placeholder="example.com"
+                            value={formData.knowledgeSources.websiteUrl}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                knowledgeSources: {
+                                  ...formData.knowledgeSources,
+                                  websiteUrl: e.target.value
+                                }
+                              })
+                            }
+                          />
+                          <Button 
+                            onClick={handleScrapeWebsite} 
+                            disabled={loading || !formData.knowledgeSources.websiteUrl}
+                          >
+                            {loading ? "Scraping..." : "Scrape"}
+                          </Button>
+                        </div>
                       </div>
                       
-                      {isScraping && scrapeProgress.status !== 'idle' && (
-                        <ScrapeStatus progress={scrapeProgress} />
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">Manual Sources</h3>
-                      <Button variant="outline" size="sm" onClick={handleAddKnowledgeSource}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Source
-                      </Button>
-                    </div>
-                    
-                    {knowledgeSources.map((source, index) => (
-                      <Card key={index} className="mb-4">
-                        <CardHeader>
-                          <CardTitle>Knowledge Source #{index + 1}</CardTitle>
-                          <CardDescription>
-                            Add a website URL or paste text for this source.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                      {scrapeProgress.status !== 'idle' && (
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h3 className="font-medium mb-2">Scraping Status</h3>
                           <div className="space-y-2">
-                            <Label htmlFor={`type-${index}`}>Type</Label>
-                            <Select
-                              onValueChange={(value: KnowledgeSourceType) =>
-                                handleKnowledgeSourceChange(index, value, source.content)
-                              }
-                              defaultValue={source.type}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a source type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="website">Website URL</SelectItem>
-                                <SelectItem value="text">Text</SelectItem>
-                                <SelectItem value="file">File Upload</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`content-${index}`}>Content</Label>
-                            {source.type === "text" ? (
-                              <Textarea
-                                id={`content-${index}`}
-                                placeholder="Paste your text here"
-                                value={source.content}
-                                onChange={(e) =>
-                                  handleKnowledgeSourceChange(
-                                    index,
-                                    source.type,
-                                    e.target.value
-                                  )
-                                }
-                                rows={4}
-                              />
-                            ) : source.type === "file" ? (
-                              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
-                                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                                <div className="mt-2">
-                                  <label
-                                    htmlFor={`file-upload-${index}`}
-                                    className="relative cursor-pointer rounded-md bg-white font-medium text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 hover:text-blue-500"
-                                  >
-                                    <span>Upload a file</span>
-                                    <input
-                                      id={`file-upload-${index}`}
-                                      name="file-upload"
-                                      type="file"
-                                      className="sr-only"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          handleKnowledgeSourceChange(
-                                            index,
-                                            source.type,
-                                            file.name
-                                          );
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500">
-                                  PDF, TXT, DOCX up to 10MB
-                                </p>
-                                {source.content && (
-                                  <p className="mt-2 text-sm text-gray-900">
-                                    {source.content}
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <Input
-                                id={`content-${index}`}
-                                placeholder="Enter website URL"
-                                value={source.content}
-                                onChange={(e) =>
-                                  handleKnowledgeSourceChange(
-                                    index,
-                                    source.type,
-                                    e.target.value
-                                  )
-                                }
-                              />
+                            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{ width: `${scrapeProgress.progress * 100}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                              <span>
+                                {scrapeProgress.processedUrls} / {scrapeProgress.totalUrls || "?"} URLs
+                              </span>
+                              <span>
+                                {scrapeProgress.status === "complete"
+                                  ? "Complete"
+                                  : scrapeProgress.status === "error"
+                                  ? "Error"
+                                  : "In progress"}
+                              </span>
+                            </div>
+                            {scrapeProgress.status === "error" && (
+                              <p className="text-red-500 text-sm">{scrapeProgress.error}</p>
                             )}
                           </div>
-
-                          {knowledgeSources.length > 1 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleRemoveKnowledgeSource(index)}
-                            >
-                              Remove Source
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </CardContent>
-                </Card>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-
-            {currentStep === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bot Information</CardTitle>
-                  <CardDescription>
-                    Enter the basic information for your new bot.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="My Awesome Bot"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
-                    <Input
-                      id="company"
-                      placeholder="Acme Corp"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bot_type">Bot Type</Label>
-                    <Select onValueChange={setBotType}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a bot type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="customer_support">Customer Support</SelectItem>
-                        <SelectItem value="sales_assistant">Sales Assistant</SelectItem>
-                        <SelectItem value="information_retrieval">Information Retrieval</SelectItem>
-                        <SelectItem value="personal_assistant">Personal Assistant</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="is_live"
-                      checked={isLive}
-                      onCheckedChange={setIsLive}
-                      disabled={hasReachedBotLimit()}
-                    />
-                    <div>
-                      <Label htmlFor="is_live">Set Bot Live</Label>
-                      {hasReachedBotLimit() && (
-                        <p className="text-xs text-red-500 mt-1">
-                          You've reached your limit of {MAX_BOTS[subscriptionTier]} bots for your {subscriptionTier.toLowerCase()} plan.
-                          Upgrade to enable more bots.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {currentStep === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Preview & Test</CardTitle>
-                  <CardDescription>
-                    Preview your bot and test its functionality.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Bot Name</Label>
-                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                      {name || "Unnamed Bot"}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Company</Label>
-                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                      {company || "Not specified"}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Bot Type</Label>
-                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                      {botType ? botType.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Not specified"}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Knowledge Sources</Label>
-                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded space-y-2">
-                      {knowledgeSources.length > 0 ? (
-                        knowledgeSources.map((source, index) => (
-                          <div key={index} className="text-sm">
-                            <span className="font-medium">{source.type}: </span>
-                            <span>
-                              {source.content.length > 50
-                                ? `${source.content.substring(0, 50)}...`
-                                : source.content || "Not specified"}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div>No knowledge sources added</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="mr-2">{isLive ? "Live" : "Not Live"}</div>
-                    <Switch
-                      checked={isLive}
-                      onCheckedChange={setIsLive}
-                      disabled={hasReachedBotLimit()}
-                      className="ml-2"
-                    />
-                  </div>
-                  
-                  <p className="text-sm text-gray-500">
-                    Try chatting with your bot to ensure it works as expected.
-                    When you're ready, click Next to finalize your bot.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            
-            {currentStep === 3 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Deployment & Integration</CardTitle>
-                  <CardDescription>
-                    Get the embed code for your bot and choose a subscription plan.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Subscription Plan</Label>
-                    <Select defaultValue={subscriptionTier}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TRIAL">Trial (Free)</SelectItem>
-                        <SelectItem value="STARTER">Starter ($29/month)</SelectItem>
-                        <SelectItem value="PRO">Professional ($99/month)</SelectItem>
-                        <SelectItem value="ENTERPRISE">Enterprise (Custom pricing)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Your current plan: {subscriptionTier}. {
-                        subscriptionTier === 'TRIAL' ? 
-                        'Upgrade for more features and bot slots.' : 
-                        'Thank you for your subscription!'
-                      }
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Embed Code</Label>
-                    <div className="relative">
-                      <Textarea
-                        value={embedCode}
-                        readOnly
-                        rows={5}
-                        className="font-mono text-xs"
-                      />
-                      <Button 
-                        className="absolute top-2 right-2" 
-                        size="sm"
-                        variant="secondary"
-                        onClick={copyEmbedCode}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Copy this code and paste it into your website's HTML to embed your chatbot.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">Integration Instructions</h3>
-                    <ol className="list-decimal pl-5 space-y-2 text-sm">
-                      <li>Copy the embed code above.</li>
-                      <li>Paste it just before the closing <code>&lt;/body&gt;</code> tag in your website's HTML.</li>
-                      <li>The chatbot will appear as a button in the bottom right corner of your website.</li>
-                      <li>Customize the appearance in the Dashboard if needed.</li>
-                    </ol>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Navigation buttons */}
-            <div className="flex justify-between mt-6">
-              {currentStep > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                >
-                  Back
-                </Button>
-              )}
-              {currentStep === 0 && (
-                <div></div> // Empty div to maintain flex spacing
-              )}
               
-              {currentStep < steps.length - 1 ? (
-                <Button 
-                  onClick={nextStep}
-                  disabled={
-                    (currentStep === 0 && knowledgeSources.some(source => !source.content)) ||
-                    (currentStep === 1 && (!name || !company || !botType))
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="usePdfs" 
+                  checked={formData.knowledgeSources.usePdfs}
+                  onCheckedChange={(checked) => 
+                    setFormData({
+                      ...formData,
+                      knowledgeSources: {
+                        ...formData.knowledgeSources,
+                        usePdfs: checked as boolean
+                      }
+                    })
                   }
-                >
-                  {currentStep === 2 && !botId ? "Create Bot" : "Next"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={finishAndGoToDashboard}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Finish & Go to Dashboard
-                </Button>
-              )}
+                />
+                <div className="space-y-4 flex-1">
+                  <Label 
+                    htmlFor="usePdfs" 
+                    className="font-medium flex items-center cursor-pointer"
+                  >
+                    <FileUp className="mr-2 h-5 w-5 text-primary" />
+                    Upload PDF Files
+                  </Label>
+                  
+                  {formData.knowledgeSources.usePdfs && (
+                    <div className="space-y-2">
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
+                        <input
+                          id="pdfUpload"
+                          type="file"
+                          accept=".pdf"
+                          multiple
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                        <label
+                          htmlFor="pdfUpload"
+                          className="flex flex-col items-center cursor-pointer"
+                        >
+                          <FileUp className="h-10 w-10 text-gray-400 mb-2" />
+                          <span className="text-gray-600 dark:text-gray-400 mb-1">
+                            Drag & drop files or click to browse
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-500">
+                            Supports PDF files
+                          </span>
+                        </label>
+                      </div>
+                      {formData.knowledgeSources.pdfFiles.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium mb-2">Selected files:</p>
+                          <ul className="space-y-2">
+                            {formData.knowledgeSources.pdfFiles.map((file, index) => (
+                              <li key={index} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                                <div className="flex-1 truncate">
+                                  <span className="text-sm">{file.name}</span>
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    ({(file.size / 1024).toFixed(0)} KB)
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-500 hover:text-red-500"
+                                  onClick={() => handleRemoveFile(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Right side - Chatbot Emulator */}
-          <div className="lg:w-1/2 mt-8 lg:mt-0">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <h3 className="text-lg font-medium mb-4">Preview Your Bot</h3>
-              <ChatbotEmulator
-                botName={name || "AI Assistant"}
-                companyName={company || "Your Company"}
-                knowledge={mockKnowledge}
-                primaryColor="#3b82f6"
+        {step === 2 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Step 2: Bot Details
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Provide basic information about your chatbot
+            </p>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="botName">Bot Name *</Label>
+                <Input
+                  id="botName"
+                  placeholder="e.g. Support Assistant"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company">Company Name</Label>
+                <Input
+                  id="company"
+                  placeholder="e.g. Acme Inc."
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                />
+              </div>
+              
+              <BotTypeSelector 
+                value={formData.botType}
+                onChange={(value) => setFormData({ ...formData, botType: value })}
               />
             </div>
           </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Step 3: Review and Create
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Review your bot's configuration before creating it
+            </p>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Bot Name
+                </h3>
+                <p className="mt-1 text-gray-900 dark:text-white">{formData.name}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Company
+                </h3>
+                <p className="mt-1 text-gray-900 dark:text-white">
+                  {formData.company || "Not specified"}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Bot Type
+                </h3>
+                <p className="mt-1 text-gray-900 dark:text-white">
+                  {formData.botType ? formData.botType.replace('_', ' ').charAt(0).toUpperCase() + formData.botType.replace('_', ' ').slice(1) : "Not specified"}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Knowledge Base
+                </h3>
+                <div className="mt-1 space-y-1">
+                  {formData.knowledgeSources.useWebsite && (
+                    <p className="text-gray-900 dark:text-white">
+                      Website: {formData.knowledgeSources.websiteUrl}
+                    </p>
+                  )}
+                  {formData.knowledgeSources.usePdfs && (
+                    <p className="text-gray-900 dark:text-white">
+                      {formData.knowledgeSources.pdfFiles.length} PDF files
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <PaymentGateway 
+            botId={botId || ""} 
+            onPaymentComplete={handlePaymentComplete}
+            onCancel={handlePaymentCancel}
+          />
+        )}
+
+        {step === 5 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Implementation
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Add this code to your website to embed the chatbot
+            </p>
+
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 relative">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Embed Code</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={copyToClipboard}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+                
+                <div className="relative">
+                  <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
+                    {embedCode}
+                  </pre>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  <p>Add this code to your website to embed the chatbot widget.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
+              <h3 className="text-primary font-medium mb-2">What's next?</h3>
+              <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2 list-disc list-inside">
+                <li>Add the code above to your website's HTML</li>
+                <li>The chatbot will automatically appear on your website</li>
+                <li>You can edit your bot's knowledge at any time from the dashboard</li>
+                <li>Monitor performance and user interactions in the analytics section</li>
+              </ul>
+            </div>
+
+            <div className="pt-4">
+              <Button onClick={() => navigate("/dashboard")}>
+                Return to Dashboard
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step < 5 && (
+          <div className="flex justify-between mt-8">
+            {step > 1 ? (
+              <Button variant="outline" onClick={handlePrevious}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+              </Button>
+            ) : (
+              <div></div>
+            )}
+            {step !== 4 && (
+              <Button onClick={handleNext} disabled={loading}>
+                {step === 3 ? (loading ? "Creating..." : "Create Bot") : "Next"}
+                {step < 3 && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden lg:block lg:w-5/12 bg-gray-100 dark:bg-gray-800 p-8 border-l border-gray-200 dark:border-gray-700">
+        <div className="sticky top-8">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+            Chatbot Preview
+          </h2>
+          <ChatbotEmulator 
+            botName={formData.name || "AI Assistant"} 
+            companyName={formData.company || "Your Company"}
+            knowledge={
+              scrapeProgress.status === 'complete' ? 
+              scrapeProgress : 
+              initialScrapeProgress
+            }
+          />
         </div>
-      </main>
+      </div>
     </div>
   );
 };
