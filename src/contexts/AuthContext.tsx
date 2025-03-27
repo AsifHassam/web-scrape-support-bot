@@ -4,6 +4,9 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
+// Production URL for redirects
+const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
@@ -66,7 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth`
+        emailRedirectTo: `${SITE_URL}/auth`
       }
     });
     return { error, data };

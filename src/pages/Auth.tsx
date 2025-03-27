@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Production URL for redirects
+const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(false); // Default to sign up instead of login
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -147,7 +150,7 @@ const Auth = () => {
     try {
       if (isForgotPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?reset=true`,
+          redirectTo: `${SITE_URL}/auth?reset=true`,
         });
         
         if (error) {
@@ -241,7 +244,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth`
+          redirectTo: `${SITE_URL}/auth`
         }
       });
       
@@ -500,4 +503,3 @@ const Auth = () => {
 };
 
 export default Auth;
-

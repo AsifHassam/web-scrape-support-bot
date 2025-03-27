@@ -1,4 +1,3 @@
-
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -13,8 +12,15 @@ if (rootElement) {
   console.error("Root element not found - could not mount React application");
 }
 
-// Handle API requests if running in a browser environment
+// Set production URL for Supabase redirects
 if (typeof window !== 'undefined') {
+  const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
+  supabase.auth.setConfig({
+    url: SITE_URL,
+    redirectTo: `${SITE_URL}/auth`,
+  });
+
+  // Handle API requests if running in a browser environment
   // Store visitor sessions to track unique visitors
   const visitorSessions = new Map<string, boolean>();
   
