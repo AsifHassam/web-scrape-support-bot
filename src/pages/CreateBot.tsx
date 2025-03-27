@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -153,6 +154,7 @@ const CreateBot = () => {
     if (step === 3) {
       setLoading(true);
       try {
+        // Create the bot first
         const { data: botData, error: botError } = await supabase
           .from("bots")
           .insert({
@@ -169,9 +171,10 @@ const CreateBot = () => {
         const newBotId = botData.id;
         setBotId(newBotId);
 
+        // Add knowledge sources for the newly created bot
         const knowledgeSourcesToAdd = [];
         
-        if (formData.knowledgeSources.useWebsite) {
+        if (formData.knowledgeSources.useWebsite && formData.knowledgeSources.websiteUrl) {
           knowledgeSourcesToAdd.push({
             bot_id: newBotId,
             source_type: "website",
@@ -179,25 +182,31 @@ const CreateBot = () => {
           });
         }
         
-        if (formData.knowledgeSources.usePdfs) {
+        if (formData.knowledgeSources.usePdfs && formData.knowledgeSources.pdfFiles.length > 0) {
+          // Add simple metadata about PDF files since actual content would need further processing
           knowledgeSourcesToAdd.push({
             bot_id: newBotId,
             source_type: "document",
-            content: "PDF files uploaded",
+            content: `${formData.knowledgeSources.pdfFiles.length} PDF files uploaded`,
           });
         }
         
         if (knowledgeSourcesToAdd.length > 0) {
+          console.log("Adding knowledge sources:", knowledgeSourcesToAdd);
           const { error: sourceError } = await supabase
             .from("knowledge_sources")
             .insert(knowledgeSourcesToAdd);
 
-          if (sourceError) throw sourceError;
+          if (sourceError) {
+            console.error("Error adding knowledge sources:", sourceError);
+            toast.error("Warning: Bot created but failed to add knowledge sources. You can add them later.");
+          }
         }
 
         toast.success("Chatbot created successfully!");
         setStep(4);
       } catch (error: any) {
+        console.error("Error details:", error);
         toast.error("Error creating bot: " + error.message);
       } finally {
         setLoading(false);

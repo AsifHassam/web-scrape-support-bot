@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
@@ -32,6 +33,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const { user } = useAuth();
   
   const form = useForm({
     defaultValues: {
@@ -69,6 +71,15 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
   
   const handleAddSource = async (values: any) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add knowledge sources",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsUploading(true);
       
       if (values.sourceType === "file") {
@@ -166,7 +177,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
       console.error("Error adding knowledge source:", error);
       toast({
         title: "Error",
-        description: "Failed to add knowledge source",
+        description: "Failed to add knowledge source: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -194,7 +205,7 @@ const KnowledgeBaseManager = ({ botId }: KnowledgeBaseManagerProps) => {
       console.error("Error deleting knowledge source:", error);
       toast({
         title: "Error",
-        description: "Failed to delete knowledge source",
+        description: "Failed to delete knowledge source: " + error.message,
         variant: "destructive",
       });
     }

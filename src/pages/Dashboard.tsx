@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +46,6 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
 
-  // Convert payment_status to SubscriptionTier
   const getSubscriptionTier = (): SubscriptionTier => {
     if (!userProfile) return 'FREE';
     
@@ -61,88 +59,97 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchBotsAndConversations = async () => {
       try {
-        // Fetch user profile with payment status
-        if (user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from("users_metadata")
-            .select("*")
-            .eq("id", user.id)
-            .maybeSingle(); // Changed from .single() to .maybeSingle() to handle cases with no results
-          
-          if (profileError) {
-            console.error("Error fetching user profile:", profileError);
-            // If no profile exists, we can create one for the current user
-            if (profileError.code === 'PGRST116') {
-              const { data: newProfile, error: insertError } = await supabase
-                .from("users_metadata")
-                .insert([{ id: user.id, payment_status: 'FREE' }])
-                .select()
-                .single();
-              
-              if (insertError) {
-                throw insertError;
-              }
-              
-              setUserProfile(newProfile as UserProfile);
-            } else {
-              throw profileError;
-            }
-          } else {
-            setUserProfile(profileData as UserProfile);
-          }
+        if (!user) {
+          console.log("No user found, skipping fetch");
+          setLoading(false);
+          return;
         }
         
-        // Fetch bots
+        const { data: profileData, error: profileError } = await supabase
+          .from("users_metadata")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          if (profileError.code === 'PGRST116') {
+            const { data: newProfile, error: insertError } = await supabase
+              .from("users_metadata")
+              .insert([{ id: user.id, payment_status: 'FREE' }])
+              .select()
+              .single();
+            
+            if (insertError) {
+              throw insertError;
+            }
+            
+            setUserProfile(newProfile as UserProfile);
+          } else {
+            throw profileError;
+          }
+        } else {
+          setUserProfile(profileData as UserProfile);
+        }
+        
         const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
-        if (botsError) throw botsError;
+        if (botsError) {
+          console.error("Error fetching bots:", botsError);
+          throw botsError;
+        }
         
-        // Get active conversations count for each bot
         const botsWithCounts = await Promise.all((botsData || []).map(async (bot) => {
-          // Query conversations that are not closed
-          const { count, error: countError } = await supabase
-            .from("conversations")
-            .select("*", { count: 'exact', head: true })
-            .eq("bot_id", bot.id)
-            .neq("status", "closed");
-          
-          if (countError) {
-            console.error("Error fetching conversation count:", countError);
-            return { ...bot, active_conversations: 0, is_live: Math.random() > 0.5 }; // Mock live status for now
+          try {
+            const { count, error: countError } = await supabase
+              .from("conversations")
+              .select("*", { count: 'exact', head: true })
+              .eq("bot_id", bot.id)
+              .neq("status", "closed");
+            
+            if (countError) {
+              console.error("Error fetching conversation count:", countError);
+              return { ...bot, active_conversations: 0, is_live: Math.random() > 0.5 };
+            }
+            
+            return { ...bot, active_conversations: count || 0, is_live: Math.random() > 0.5 };
+          } catch (error) {
+            console.error("Error processing bot data:", error);
+            return { ...bot, active_conversations: 0, is_live: false };
           }
-          
-          return { ...bot, active_conversations: count || 0, is_live: Math.random() > 0.5 }; // Mock live status for now
         }));
         
         setBots(botsWithCounts);
         
-        // Get total messages count
         const { count: messageCount, error: messageError } = await supabase
           .from("messages")
           .select("*", { count: 'exact', head: true });
         
         if (!messageError) {
           setTotalMessages(messageCount || 0);
+        } else {
+          console.error("Error fetching message count:", messageError);
         }
         
-        // Get total conversations count
         const { count: conversationCount, error: conversationError } = await supabase
           .from("conversations")
           .select("*", { count: 'exact', head: true });
         
         if (!conversationError) {
           setTotalConversations(conversationCount || 0);
+        } else {
+          console.error("Error fetching conversation count:", conversationError);
         }
         
-        // Get team members (mock for now)
         setTeamMemberCount(1);
         
       } catch (error: any) {
-        toast.error("Error fetching bots: " + error.message);
         console.error("Error fetching data:", error);
+        toast.error("Error fetching data: " + error.message);
       } finally {
         setLoading(false);
       }
@@ -156,7 +163,7 @@ const Dashboard = () => {
   };
 
   const handleEditBot = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card click
+    e.stopPropagation();
     navigate(`/edit-bot/${id}`);
   };
   
@@ -165,7 +172,7 @@ const Dashboard = () => {
   };
 
   const openDeleteConfirmation = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card click
+    e.stopPropagation();
     setDeletingBotId(id);
     setConfirmDialogOpen(true);
   };
@@ -174,24 +181,33 @@ const Dashboard = () => {
     if (!deletingBotId) return;
     
     try {
-      const { error } = await supabase
+      const { error: knowledgeSourcesError } = await supabase
+        .from("knowledge_sources")
+        .delete()
+        .eq("bot_id", deletingBotId);
+      
+      if (knowledgeSourcesError) {
+        console.error("Error deleting knowledge sources:", knowledgeSourcesError);
+      }
+      
+      const { error: botError } = await supabase
         .from("bots")
         .delete()
         .eq("id", deletingBotId);
 
-      if (error) throw error;
+      if (botError) throw botError;
+      
       setBots(bots.filter((bot) => bot.id !== deletingBotId));
       toast.success("Bot deleted successfully");
     } catch (error: any) {
-      toast.error("Error deleting bot: " + error.message);
       console.error("Delete error:", error);
+      toast.error("Error deleting bot: " + error.message);
     } finally {
       setDeletingBotId(null);
       setConfirmDialogOpen(false);
     }
   };
 
-  // Helper function to format bot type for display
   const formatBotType = (type?: string) => {
     if (!type) return "";
     
@@ -201,7 +217,6 @@ const Dashboard = () => {
       .join(' ');
   };
 
-  // Count live bots
   const liveBots = bots.filter(bot => bot.is_live).length;
   const subscriptionTier = getSubscriptionTier();
 
