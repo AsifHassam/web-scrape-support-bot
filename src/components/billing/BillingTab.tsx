@@ -65,7 +65,7 @@ const BillingTab = () => {
         }
         
         if (subData) {
-          setSubscription(subData);
+          setSubscription(subData as unknown as Subscription);
         }
         
         // Fetch payment methods
@@ -81,7 +81,7 @@ const BillingTab = () => {
         }
         
         if (paymentData) {
-          setPaymentMethods(paymentData);
+          setPaymentMethods(paymentData as unknown as PaymentMethod[]);
         }
       } catch (error: any) {
         console.error("Error in fetchBillingData:", error.message);

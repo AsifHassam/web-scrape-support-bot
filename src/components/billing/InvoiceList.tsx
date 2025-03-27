@@ -46,7 +46,7 @@ const InvoiceList = ({ userId }: { userId?: string }) => {
           
         if (error) throw error;
         
-        setInvoices(data || []);
+        setInvoices(data as unknown as Invoice[] || []);
       } catch (error: any) {
         console.error("Error fetching invoices:", error.message);
         toast.error("Failed to load invoice history");

@@ -115,9 +115,11 @@ const UpdatePaymentDialog = ({ open, onOpenChange, onSuccess }: UpdatePaymentDia
       // Update user metadata
       await supabase
         .from("users_metadata")
-        .update({ has_payment_method: true })
+        .update({ 
+          payment_status: "ACTIVE" 
+        })
         .eq("id", user.id);
-      
+        
       // Call the success callback
       if (data) {
         onSuccess(data);
