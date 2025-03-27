@@ -67,10 +67,29 @@ const Dashboard = () => {
             .from("users_metadata")
             .select("*")
             .eq("id", user.id)
-            .single();
+            .maybeSingle(); // Changed from .single() to .maybeSingle() to handle cases with no results
           
-          if (profileError) throw profileError;
-          setUserProfile(profileData as UserProfile);
+          if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+            // If no profile exists, we can create one for the current user
+            if (profileError.code === 'PGRST116') {
+              const { data: newProfile, error: insertError } = await supabase
+                .from("users_metadata")
+                .insert([{ id: user.id, payment_status: 'FREE' }])
+                .select()
+                .single();
+              
+              if (insertError) {
+                throw insertError;
+              }
+              
+              setUserProfile(newProfile as UserProfile);
+            } else {
+              throw profileError;
+            }
+          } else {
+            setUserProfile(profileData as UserProfile);
+          }
         }
         
         // Fetch bots
