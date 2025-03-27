@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { Lock, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -19,20 +21,25 @@ const AdminLogin = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
-        // Check if the user is hello@liorra.io (automatic admin)
-        if (user.email === "hello@liorra.io") {
-          console.log("Already logged in as admin email, redirecting to dashboard");
-          localStorage.setItem("adminAuthenticated", "true");
-          localStorage.setItem("adminAuthTime", Date.now().toString());
-          navigate("/admin", { replace: true });
-          return;
-        }
-
-        // Otherwise check localStorage
-        const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-        if (adminAuthenticated) {
-          console.log("Already logged in as admin, redirecting to dashboard");
-          navigate("/admin", { replace: true });
+        try {
+          // Check if the user is an admin in the database
+          const { data, error } = await supabase.rpc('is_admin', {
+            user_id: user.id
+          });
+          
+          if (error) {
+            console.error("Error checking admin status:", error);
+            return;
+          }
+          
+          if (data === true) {
+            console.log("User is already an admin, redirecting to dashboard");
+            localStorage.setItem("adminAuthenticated", "true");
+            localStorage.setItem("adminAuthTime", Date.now().toString());
+            navigate("/admin", { replace: true });
+          }
+        } catch (error) {
+          console.error("Exception checking admin status:", error);
         }
       }
     };
@@ -46,35 +53,43 @@ const AdminLogin = () => {
     setError("");
 
     try {
-      // Support two login methods:
-      // 1. Username/password combination: admin/Liorra2025!
-      // 2. Email/password combination: hello@liorra.io/Liorra2025!
+      // First authenticate with Supabase
+      const { data: authData, error: authError } = await signIn(email, password);
       
-      if ((username === "admin" && password === "Liorra2025!") || 
-          (username === "hello@liorra.io" && password === "Liorra2025!")) {
-        console.log("Admin credentials valid");
-        
-        // Allow direct login without requiring Supabase auth for admin accounts
-        // This addresses the issue with Supabase authentication errors
-        
-        // Store admin status in localStorage with timestamp
-        localStorage.setItem("adminAuthenticated", "true");
-        localStorage.setItem("adminAuthTime", Date.now().toString());
-        
-        toast.success("Admin login successful");
-        
-        console.log("Admin authenticated, redirecting to admin dashboard");
-        
-        // Use a more reliable way to redirect with a longer delay
-        setTimeout(() => {
-          console.log("Now redirecting to admin dashboard");
-          navigate("/admin", { replace: true });
-        }, 1500);
-      } else {
-        setError("Invalid admin credentials");
+      if (authError) {
+        throw new Error(authError.message);
       }
-    } catch (err) {
-      setError("An error occurred during login");
+      
+      if (!authData?.user) {
+        throw new Error("Authentication failed");
+      }
+      
+      // Then check if this user is an admin
+      const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin', {
+        user_id: authData.user.id
+      });
+      
+      if (isAdminError) {
+        throw new Error(isAdminError.message);
+      }
+      
+      if (isAdminData !== true) {
+        throw new Error("Not authorized as admin");
+      }
+      
+      // Store admin status in localStorage with timestamp
+      localStorage.setItem("adminAuthenticated", "true");
+      localStorage.setItem("adminAuthTime", Date.now().toString());
+      
+      toast.success("Admin login successful");
+      
+      // Redirect to admin dashboard
+      setTimeout(() => {
+        navigate("/admin", { replace: true });
+      }, 1000);
+      
+    } catch (err: any) {
+      setError(err.message || "An error occurred during login");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
@@ -105,19 +120,19 @@ const AdminLogin = () => {
           <form className="mt-8 space-y-6" onSubmit={handleAdminLogin}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div className="mb-4">
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Username
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
                 </label>
                 <div className="relative">
                   <Input
-                    id="username"
-                    name="username"
-                    type="text"
+                    id="email"
+                    name="email"
+                    type="email"
                     required
                     className="pl-10"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_admin?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bot_analytics: {
         Row: {
           bot_id: string
@@ -136,90 +157,6 @@ export type Database = {
           },
         ]
       }
-      feedback: {
-        Row: {
-          browser: string | null
-          content: string | null
-          email: string | null
-          id: string
-          os: string | null
-          page_url: string | null
-          status: string
-          timestamp: string
-          type: string
-          user_id: string
-          video_url: string | null
-        }
-        Insert: {
-          browser?: string | null
-          content?: string | null
-          email?: string | null
-          id?: string
-          os?: string | null
-          page_url?: string | null
-          status?: string
-          timestamp?: string
-          type: string
-          user_id: string
-          video_url?: string | null
-        }
-        Update: {
-          browser?: string | null
-          content?: string | null
-          email?: string | null
-          id?: string
-          os?: string | null
-          page_url?: string | null
-          status?: string
-          timestamp?: string
-          type?: string
-          user_id?: string
-          video_url?: string | null
-        }
-        Relationships: []
-      }
-      invoices: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          description: string | null
-          due_date: string | null
-          id: string
-          invoice_date: string
-          invoice_number: string | null
-          payment_date: string | null
-          status: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          invoice_date?: string
-          invoice_number?: string | null
-          payment_date?: string | null
-          status: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          invoice_date?: string
-          invoice_number?: string | null
-          payment_date?: string | null
-          status?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       knowledge_sources: {
         Row: {
           bot_id: string
@@ -287,87 +224,6 @@ export type Database = {
           },
         ]
       }
-      payment_methods: {
-        Row: {
-          card_type: string
-          created_at: string
-          exp_month: number
-          exp_year: number
-          id: string
-          is_default: boolean
-          last_four: string
-          provider: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          card_type: string
-          created_at?: string
-          exp_month: number
-          exp_year: number
-          id?: string
-          is_default?: boolean
-          last_four: string
-          provider: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          card_type?: string
-          created_at?: string
-          exp_month?: number
-          exp_year?: number
-          id?: string
-          is_default?: boolean
-          last_four?: string
-          provider?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          auto_renew: boolean
-          billing_cycle: string
-          created_at: string
-          end_date: string | null
-          id: string
-          plan_name: string
-          price: number
-          start_date: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          auto_renew?: boolean
-          billing_cycle: string
-          created_at?: string
-          end_date?: string | null
-          id?: string
-          plan_name: string
-          price: number
-          start_date?: string
-          status: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          auto_renew?: boolean
-          billing_cycle?: string
-          created_at?: string
-          end_date?: string | null
-          id?: string
-          plan_name?: string
-          price?: number
-          start_date?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       team_members: {
         Row: {
           access_level: string
@@ -395,30 +251,6 @@ export type Database = {
           owner_id?: string
           role?: string
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      user_preferences: {
-        Row: {
-          bot_purpose: string | null
-          created_at: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          bot_purpose?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          bot_purpose?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -491,57 +323,6 @@ export type Database = {
         }
         Relationships: []
       }
-      waitlist: {
-        Row: {
-          company: string
-          created_at: string
-          email: string
-          id: string
-          name: string
-        }
-        Insert: {
-          company: string
-          created_at?: string
-          email: string
-          id?: string
-          name: string
-        }
-        Update: {
-          company?: string
-          created_at?: string
-          email?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      widget_settings: {
-        Row: {
-          button_offset: number
-          created_at: string
-          id: string
-          position: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          button_offset?: number
-          created_at?: string
-          id?: string
-          position?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          button_offset?: number
-          created_at?: string
-          id?: string
-          position?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -561,6 +342,12 @@ export type Database = {
           updated_at: string
           primary_color: string
         }[]
+      }
+      is_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
