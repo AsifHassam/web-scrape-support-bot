@@ -1,3 +1,4 @@
+
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -15,21 +16,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     console.log("AdminRoute: checking admin status, user:", user?.email);
     
     const checkAdminStatus = () => {
-      // Check if the user is logged in with the admin email (hello@liorra.io)
-      // This provides true admin privileges to this specific account
-      const isAdminEmail = user?.email === "hello@liorra.io";
-      
-      if (isAdminEmail) {
-        console.log("AdminRoute: User is admin by email (hello@liorra.io)");
-        // If the user is hello@liorra.io, they are always an admin
-        localStorage.setItem("adminAuthenticated", "true");
-        localStorage.setItem("adminAuthTime", Date.now().toString());
-        setIsAdmin(true);
-        setCheckingAdmin(false);
-        return;
-      }
-      
-      // Otherwise, check if admin is authenticated via localStorage
+      // Check if the user has admin credentials in localStorage
       const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
       
       // Add a time-based check to require re-authentication after 8 hours
@@ -50,20 +37,28 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         }
       }
       
-      console.log("AdminRoute: adminAuthenticated =", isStillValid);
-      setIsAdmin(isStillValid);
+      // Check if email is hello@liorra.io (automatic admin privilege)
+      const isAdminEmail = user?.email === "hello@liorra.io";
+      
+      // User is admin if they have valid localStorage credentials OR they have the admin email
+      const isValidAdmin = isStillValid || isAdminEmail;
+      
+      if (isAdminEmail) {
+        // If the user has the admin email, refresh their admin status
+        localStorage.setItem("adminAuthenticated", "true");
+        localStorage.setItem("adminAuthTime", Date.now().toString());
+      }
+      
+      console.log("AdminRoute: admin status =", isValidAdmin);
+      setIsAdmin(isValidAdmin);
       setCheckingAdmin(false);
     };
     
-    if (user) {
-      // If user is authenticated with Supabase, check admin status
+    if (!loading) {
+      // Check admin status once loading is complete
       setTimeout(checkAdminStatus, 500);
-    } else {
-      // If no user, definitely not an admin
-      setIsAdmin(false);
-      setCheckingAdmin(false);
     }
-  }, [user]); // Re-check when auth state changes
+  }, [user, loading]); // Re-check when auth state or loading changes
 
   // Show loading state while checking authentication
   if (loading || checkingAdmin) {
@@ -75,12 +70,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     );
   }
   
-  // Check if user is authenticated first
-  if (!user) {
-    console.log("AdminRoute: user not authenticated, redirecting to admin login");
-    return <Navigate to="/admin/login" replace />;
-  }
-
   // If not admin, redirect to admin login
   if (!isAdmin) {
     console.log("AdminRoute: user not admin, redirecting to admin login");
