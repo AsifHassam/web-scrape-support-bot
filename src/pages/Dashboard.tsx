@@ -13,7 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -41,7 +40,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [deletingBotId, setDeletingBotId] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [teamMemberCount, setTeamMemberCount] = useState(1);
   const [totalMessages, setTotalMessages] = useState(0);
   const [totalConversations, setTotalConversations] = useState(0);
@@ -210,13 +208,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleBotStatusChange = (botId: string, isLive: boolean) => {
-    setBots(prevBots => 
-      prevBots.map(bot => 
-        bot.id === botId ? { ...bot, is_live: isLive } : bot
-      )
-    );
-  };
+  // Remove the handleBotStatusChange function since we don't want to change bot status from here
 
   const formatBotType = (type?: string) => {
     if (!type) return "";
@@ -389,7 +381,7 @@ const Dashboard = () => {
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => setUpgradeDialogOpen(true)}
+                      onClick={() => navigate("/pricing")}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Upgrade to Add Team Members

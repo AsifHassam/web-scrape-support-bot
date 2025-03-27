@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,14 +74,14 @@ const EditBot = () => {
           
         if (error) throw error;
         
-        const status = data?.payment_status?.toUpperCase() || 'FREE';
+        const status = data?.payment_status?.toUpperCase() || 'TRIAL';
         if (status === 'PAID' || status === 'PRO') setSubscriptionTier('PRO');
         else if (status === 'STARTER') setSubscriptionTier('STARTER');
         else if (status === 'ENTERPRISE') setSubscriptionTier('ENTERPRISE');
-        else setSubscriptionTier('FREE');
+        else setSubscriptionTier('TRIAL');
       } catch (error) {
         console.error("Error fetching subscription:", error);
-        setSubscriptionTier('FREE');
+        setSubscriptionTier('TRIAL');
       }
     };
     
@@ -228,8 +229,13 @@ const EditBot = () => {
   const handleBotStatusChange = async (status: boolean) => {
     setIsLive(status);
     
-    // We don't need to update the database here because the BotStatusToggle component will do it
-    // We only need to update the local state
+    // Update the bot object to reflect the new status
+    if (bot) {
+      setBot({
+        ...bot,
+        is_live: status
+      });
+    }
   };
 
   useEffect(() => {

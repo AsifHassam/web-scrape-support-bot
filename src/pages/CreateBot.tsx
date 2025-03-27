@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +39,7 @@ const CreateBot = () => {
 
   const handleKnowledgeSourceChange = (
     index: number,
-    type: string,
+    type: "website" | "text" | "file",
     content: string
   ) => {
     const updatedSources = [...knowledgeSources];
@@ -82,7 +83,7 @@ const CreateBot = () => {
           .insert([
             {
               bot_id: botData.id,
-              type: source.type,
+              source_type: source.type, // Map type to source_type
               content: source.content,
             },
           ]);

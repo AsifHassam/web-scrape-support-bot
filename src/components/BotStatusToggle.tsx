@@ -23,6 +23,7 @@ const BotStatusToggle = ({
   className = "",
 }: BotStatusToggleProps) => {
   const [loading, setLoading] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(isLive);
   const { toast } = useToast();
   const maxLiveBots = SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots;
 
@@ -30,6 +31,7 @@ const BotStatusToggle = ({
     // Stop event propagation to prevent card click
     e.stopPropagation();
     
+    // If trying to set a bot live and we're at the limit, prevent the change
     if (checked && liveBotCount >= maxLiveBots && !isLive) {
       toast({
         title: "Subscription limit reached",
@@ -49,6 +51,8 @@ const BotStatusToggle = ({
 
       if (error) throw error;
 
+      // Only update local state after successful DB update
+      setCurrentStatus(checked);
       onStatusChange(checked);
       
       toast({
@@ -72,13 +76,13 @@ const BotStatusToggle = ({
   return (
     <div className={`flex items-center space-x-2 ${className}`} onClick={(e) => e.stopPropagation()}>
       <Switch
-        checked={isLive}
+        checked={currentStatus}
         onCheckedChange={(checked) => handleToggle(checked, window.event || {} as any)}
         disabled={loading}
         className={loading ? "opacity-50 cursor-not-allowed" : ""}
       />
       <span className="text-sm font-medium">
-        {isLive ? "Live" : "Draft"}
+        {currentStatus ? "Live" : "Draft"}
       </span>
     </div>
   );
