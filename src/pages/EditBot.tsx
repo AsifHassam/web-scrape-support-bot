@@ -14,6 +14,7 @@ import { generateEmbedCode } from "@/utils/generateEmbedCode";
 import ChatbotEmulator from "@/components/ChatbotEmulator";
 import ChatbotStylingForm from "@/components/ChatbotStylingForm";
 import BotStatusToggle from "@/components/BotStatusToggle";
+import { SubscriptionTier } from "@/lib/types/billing";
 
 const EditBot = () => {
   const [bot, setBot] = useState<any>(null);
