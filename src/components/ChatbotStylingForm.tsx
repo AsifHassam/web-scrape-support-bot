@@ -51,7 +51,7 @@ interface ChatbotStylingFormProps {
 const ChatbotStylingForm = ({ initialValues, onSave }: ChatbotStylingFormProps) => {
   const [colorPickerValue, setColorPickerValue] = useState(initialValues.primaryColor);
   const [accentColorValue, setAccentColorValue] = useState(initialValues.accentColor || "#f3f4f6");
-  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>("FREE");
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>("TRIAL");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -75,11 +75,11 @@ const ChatbotStylingForm = ({ initialValues, onSave }: ChatbotStylingFormProps) 
         } else if (status === 'ENTERPRISE') {
           setSubscriptionTier('ENTERPRISE');
         } else {
-          setSubscriptionTier('FREE');
+          setSubscriptionTier('TRIAL');
         }
       } catch (error) {
         console.error("Error fetching subscription:", error);
-        setSubscriptionTier('FREE');
+        setSubscriptionTier('TRIAL');
       }
     };
     

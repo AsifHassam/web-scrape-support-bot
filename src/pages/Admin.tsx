@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SubscriptionTier } from "@/lib/types/billing";
 
 // Components
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -17,7 +17,7 @@ interface UserData {
   created_at: string;
   last_sign_in_at: string | null;
   status: 'ACTIVE' | 'BLOCKED';
-  payment_status: 'FREE' | 'PAID' | 'TRIAL';
+  payment_status: SubscriptionTier | 'PAID';
 }
 
 const Admin = () => {
@@ -71,6 +71,12 @@ const Admin = () => {
       // 4. Combine profile data with metadata
       const combinedUsers: UserData[] = metadataData?.map(metadata => {
         const profile = profilesMap.get(metadata.id);
+        let paymentStatus = metadata.payment_status.toUpperCase();
+        
+        // Convert any 'FREE' to 'TRIAL'
+        if (paymentStatus === 'FREE') {
+          paymentStatus = 'TRIAL';
+        }
         
         return {
           id: metadata.id,
@@ -78,7 +84,7 @@ const Admin = () => {
           created_at: metadata.created_at,
           last_sign_in_at: profile?.updated_at || null,
           status: metadata.status as 'ACTIVE' | 'BLOCKED',
-          payment_status: metadata.payment_status as 'FREE' | 'PAID' | 'TRIAL'
+          payment_status: paymentStatus as SubscriptionTier | 'PAID'
         };
       }) || [];
       
@@ -104,7 +110,7 @@ const Admin = () => {
           created_at: "2023-02-15T14:30:00Z",
           last_sign_in_at: null,
           status: "ACTIVE",
-          payment_status: "FREE"
+          payment_status: "TRIAL"
         },
         {
           id: "3",
@@ -198,7 +204,7 @@ const Admin = () => {
     }
   };
 
-  const updatePaymentStatus = async (userId: string, newStatus: 'FREE' | 'PAID' | 'TRIAL') => {
+  const updatePaymentStatus = async (userId: string, newStatus: SubscriptionTier | 'PAID') => {
     try {
       // Update the payment status in users_metadata
       const { error } = await supabase
