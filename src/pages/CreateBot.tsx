@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -162,6 +161,12 @@ const CreateBot = () => {
       title: source.type === "website" ? `Website ${index + 1}` : `Document ${index + 1}`,
       content: source.type === "text" ? source.content : `Sample content from ${source.type} ${index + 1}`,
     })),
+    totalUrls: knowledgeSources.length,
+    processedUrls: knowledgeSources.length,
+    progress: 1,
+    error: undefined,
+    websiteUrl: knowledgeSources.find(source => source.type === "website")?.content || "https://example.com",
+    content: undefined
   };
 
   return (
