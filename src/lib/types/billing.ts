@@ -54,8 +54,8 @@ export type SubscriptionLimits = {
 
 export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, SubscriptionLimits> = {
   FREE: {
-    maxMessages: 500,
-    maxConversations: 50,
+    maxMessages: 100,
+    maxConversations: 20,
     maxTeamMembers: 1,
     maxLiveBots: 1,
     advancedAnalytics: false,
