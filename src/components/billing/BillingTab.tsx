@@ -51,11 +51,11 @@ const BillingTab = () => {
         
         // Fetch active subscription
         const { data: subData, error: subError } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
           .limit(1)
           .single();
           
@@ -70,10 +70,10 @@ const BillingTab = () => {
         
         // Fetch payment methods
         const { data: paymentData, error: paymentError } = await supabase
-          .from("payment_methods")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("is_default", { ascending: false });
+          .from('payment_methods')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('is_default', { ascending: false });
           
         if (paymentError) {
           console.error("Error fetching payment methods:", paymentError);

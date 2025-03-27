@@ -35,7 +35,7 @@ export const useMessages = (conversationId: string | null) => {
       if (error) throw error;
       
       // Cast the data to the proper Message type
-      const typedMessages = (data || []).map(msg => ({
+      const typedMessages = (data || []).map((msg: any) => ({
         ...msg,
         role: msg.role as 'user' | 'bot' | 'human'
       }));

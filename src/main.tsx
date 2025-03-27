@@ -62,7 +62,7 @@ if (typeof window !== 'undefined') {
         // Update analytics
         try {
           const analyticsResponse = await fetch(
-            'https://mgtycpcnobkbfolkhobk.supabase.co/functions/v1/update-analytics',
+            `https://qbhevelbszcvxkutfmlg.supabase.co/functions/v1/update-analytics`,
             {
               method: 'POST',
               headers: {
@@ -98,7 +98,7 @@ if (typeof window !== 'undefined') {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization'
           }
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error generating response:', error);
         return new Response(JSON.stringify({ 
           error: 'Failed to generate response',

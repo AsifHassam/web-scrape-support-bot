@@ -62,7 +62,7 @@ export const useConversations = (botId: string, filter: 'open' | 'my' | 'unassig
       if (error) throw error;
       
       // Transform the data to match the Conversation interface
-      const formattedConversations: Conversation[] = data.map((conv) => {
+      const formattedConversations: Conversation[] = (data || []).map((conv: any) => {
         const messages = conv.messages || [];
         const lastMessage = messages.length > 0 ? 
           messages.sort((a: any, b: any) => 

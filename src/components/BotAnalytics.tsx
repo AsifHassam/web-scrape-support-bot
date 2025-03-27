@@ -72,7 +72,7 @@ const BotAnalytics = ({ botId }: BotAnalyticsProps) => {
       if (error) throw error;
       
       // Cast the data to the correct type
-      const typedData = data as BotAnalyticsRecord[];
+      const typedData = data as unknown as BotAnalyticsRecord[];
       
       // Generate date intervals
       const dates = eachDayOfInterval({

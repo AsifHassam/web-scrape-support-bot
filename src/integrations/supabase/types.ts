@@ -27,6 +27,44 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_analytics: {
+        Row: {
+          bot_id: string | null
+          chat_count: number | null
+          created_at: string | null
+          date: string
+          id: string
+          unique_visitors: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          bot_id?: string | null
+          chat_count?: number | null
+          created_at?: string | null
+          date: string
+          id?: string
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          bot_id?: string | null
+          chat_count?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_analytics_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bots: {
         Row: {
           bot_type: string | null
@@ -239,6 +277,45 @@ export type Database = {
           is_default?: boolean | null
           last_four?: string
           provider?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          auto_renew: boolean | null
+          billing_cycle: string
+          created_at: string | null
+          end_date: string | null
+          id: string
+          plan_name: string
+          price: number
+          start_date: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          auto_renew?: boolean | null
+          billing_cycle: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          plan_name: string
+          price: number
+          start_date?: string
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          plan_name?: string
+          price?: number
+          start_date?: string
+          status?: string
           user_id?: string | null
         }
         Relationships: []
