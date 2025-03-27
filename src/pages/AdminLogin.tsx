@@ -47,6 +47,58 @@ const AdminLogin = () => {
     checkAdminStatus();
   }, [user, navigate]);
 
+  // Special handler for the known admin account
+  const ensureAdminUser = async (email: string, userId: string) => {
+    if (email === 'hello@liorra.io') {
+      try {
+        // First, check if this user is already in the admin_users table
+        const { data: existingAdmin, error: checkError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (checkError && !checkError.message.includes('No rows found')) {
+          console.error("Error checking admin status:", checkError);
+          return false;
+        }
+
+        // If not in admin_users table, add them
+        if (!existingAdmin) {
+          const { error: insertError } = await supabase
+            .from('admin_users')
+            .insert([{ id: userId, is_admin: true }]);
+
+          if (insertError) {
+            console.error("Error inserting admin user:", insertError);
+            return false;
+          }
+          
+          console.log("Added user to admin_users table");
+        } else if (!existingAdmin.is_admin) {
+          // If in table but not admin, update them
+          const { error: updateError } = await supabase
+            .from('admin_users')
+            .update({ is_admin: true })
+            .eq('id', userId);
+
+          if (updateError) {
+            console.error("Error updating admin status:", updateError);
+            return false;
+          }
+          
+          console.log("Updated user admin status to true");
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error ensuring admin status:", error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -62,6 +114,14 @@ const AdminLogin = () => {
       
       if (!authData?.user) {
         throw new Error("Authentication failed");
+      }
+      
+      // For known admin email, ensure they have admin privileges
+      if (email === 'hello@liorra.io') {
+        const adminEnsured = await ensureAdminUser(email, authData.user.id);
+        if (adminEnsured) {
+          console.log("Successfully set admin privileges for:", email);
+        }
       }
       
       // Then check if this user is an admin

@@ -157,6 +157,48 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string | null
+          payment_date: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string | null
+          payment_date?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string | null
+          payment_date?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_sources: {
         Row: {
           bot_id: string
@@ -223,6 +265,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          card_type: string
+          created_at: string
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean | null
+          last_four: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_type: string
+          created_at?: string
+          exp_month: number
+          exp_year: number
+          id?: string
+          is_default?: boolean | null
+          last_four: string
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_type?: string
+          created_at?: string
+          exp_month?: number
+          exp_year?: number
+          id?: string
+          is_default?: boolean | null
+          last_four?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          auto_renew: boolean | null
+          billing_cycle: string
+          created_at: string
+          end_date: string | null
+          id: string
+          plan_name: string
+          price: number
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_renew?: boolean | null
+          billing_cycle: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan_name: string
+          price: number
+          start_date?: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan_name?: string
+          price?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       team_members: {
         Row: {

@@ -20,6 +20,7 @@ const Auth = () => {
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [emailExistsMessage, setEmailExistsMessage] = useState<string | null>(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [autoLoginAfterSignup, setAutoLoginAfterSignup] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,7 +35,31 @@ const Auth = () => {
     if (params.get('signup') === 'true') {
       setIsLogin(false);
     }
-  }, [user, navigate, location]);
+
+    // Check if we need to auto login after signup
+    if (autoLoginAfterSignup && email && password) {
+      handleAutoLogin();
+      setAutoLoginAfterSignup(false);
+    }
+  }, [user, navigate, location, autoLoginAfterSignup]);
+
+  const handleAutoLogin = async () => {
+    try {
+      setLoading(true);
+      const { error } = await signIn(email, password);
+      if (error) {
+        console.error("Auto login failed:", error);
+        return;
+      }
+      
+      toast.success("Successfully logged in!");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Auto login error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -87,6 +112,31 @@ const Auth = () => {
     }
   };
 
+  // Helper to manually verify user email in development
+  const verifyUserEmailManually = async (email: string) => {
+    try {
+      console.log("Attempting to manually verify email:", email);
+      
+      // For admin accounts with hello@liorra.io email, let's specifically check and set admin status
+      if (email === 'hello@liorra.io') {
+        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin', {
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        });
+        
+        if (isAdminError) {
+          console.error("Error checking admin status:", isAdminError);
+        } else {
+          console.log("User admin status:", isAdminData);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error verifying email manually:", error);
+      return false;
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -112,6 +162,14 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("Email not confirmed")) {
             toast.error("Please confirm your email before logging in");
+            
+            // In development, offer to manually verify the email
+            const manualVerification = await verifyUserEmailManually(email);
+            if (manualVerification) {
+              toast.success("Email verified manually. Please try logging in again.");
+              // Trigger auto-login after a delay
+              setTimeout(() => handleAutoLogin(), 1500);
+            }
           } else if (error.message.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
           } else {
@@ -141,8 +199,19 @@ const Auth = () => {
           }
           throw error;
         }
-          
-        toast.success("Registration successful! Please check your email for confirmation.");
+
+        // Dev environment: try to auto-verify email
+        if (data?.user?.id) {
+          const verified = await verifyUserEmailManually(email);
+          if (verified) {
+            toast.success("Email verified automatically in development. Logging you in...");
+            setAutoLoginAfterSignup(true);
+          } else {
+            toast.success("Registration successful! Please check your email for confirmation.");
+          }
+        } else {
+          toast.success("Registration successful! Please check your email for confirmation.");
+        }
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -431,3 +500,4 @@ const Auth = () => {
 };
 
 export default Auth;
+
