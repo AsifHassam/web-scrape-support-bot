@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -119,7 +118,6 @@ const CreateBot = () => {
 
   const validateStep = () => {
     if (step === 1) {
-      // Validate knowledge sources
       if (formData.knowledgeSources.useWebsite && !formData.knowledgeSources.websiteUrl) {
         toast.error("Please enter a website URL or uncheck the website option");
         return false;
@@ -140,18 +138,10 @@ const CreateBot = () => {
         return false;
       }
     } else if (step === 2) {
-      // Validate bot details
       if (!formData.name) {
         toast.error("Please enter a bot name");
         return false;
       }
-      
-      // Don't require bot type selection
-      // This line is commented out, removing the validation requirement
-      // if (!formData.botType) {
-      //   toast.error("Please select a bot type");
-      //   return false;
-      // }
     }
     
     return true;
@@ -179,7 +169,6 @@ const CreateBot = () => {
         const newBotId = botData.id;
         setBotId(newBotId);
 
-        // Add knowledge sources
         const knowledgeSourcesToAdd = [];
         
         if (formData.knowledgeSources.useWebsite) {
@@ -207,7 +196,7 @@ const CreateBot = () => {
         }
 
         toast.success("Chatbot created successfully!");
-        setStep(4); // Go to payment step
+        setStep(4);
       } catch (error: any) {
         toast.error("Error creating bot: " + error.message);
       } finally {
@@ -223,11 +212,11 @@ const CreateBot = () => {
   };
 
   const handlePaymentComplete = () => {
-    setStep(5); // Go to embed code step after payment
+    setStep(5);
   };
 
   const handlePaymentCancel = () => {
-    setStep(3); // Go back to review step
+    setStep(3);
   };
 
   const copyToClipboard = () => {
