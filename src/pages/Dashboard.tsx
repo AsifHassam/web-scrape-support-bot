@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, User, MessageSquare, Users } from "lucide-react";
+import { PlusCircle, Edit, Trash2, User, MessageSquare, Users, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Dialog,
@@ -235,6 +236,10 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <div className="flex items-center space-x-4">
+            <Badge variant="outline" className="flex items-center gap-1 border-primary/50">
+              <Crown className="h-3 w-3 text-primary" />
+              <span className="text-xs font-medium">{subscriptionTier}</span>
+            </Badge>
             <ThemeToggle />
             <span className="text-sm text-gray-600 dark:text-gray-300">
               {user?.email}

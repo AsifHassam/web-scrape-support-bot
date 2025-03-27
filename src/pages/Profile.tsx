@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Key, LogOut } from "lucide-react";
+import { ArrowLeft, Save, Key, LogOut, Crown } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -32,7 +32,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import BillingTab from "@/components/billing/BillingTab";
+import { SubscriptionTier } from "@/lib/types/billing";
 
 type UserProfile = {
   id: string;
@@ -50,6 +52,7 @@ const Profile = () => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [userSubscription, setUserSubscription] = useState<SubscriptionTier>('FREE');
   
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -74,6 +77,25 @@ const Profile = () => {
         setDisplayName(data.display_name || "");
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || "");
+        
+        const { data: metaData, error: metaError } = await supabase
+          .from("users_metadata")
+          .select("payment_status")
+          .eq("id", user.id)
+          .single();
+          
+        if (!metaError && metaData) {
+          const status = metaData.payment_status.toUpperCase();
+          if (status === 'PAID' || status === 'PRO') {
+            setUserSubscription('PRO');
+          } else if (status === 'STARTER') {
+            setUserSubscription('STARTER');
+          } else if (status === 'ENTERPRISE') {
+            setUserSubscription('ENTERPRISE');
+          } else {
+            setUserSubscription('FREE');
+          }
+        }
       } catch (error: any) {
         console.error("Error fetching profile:", error.message);
         toast.error("Failed to load profile");
@@ -170,6 +192,10 @@ const Profile = () => {
             </button>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
           </div>
+          <Badge variant="outline" className="flex items-center gap-1 border-primary/50">
+            <Crown className="h-3 w-3 text-primary" />
+            <span className="text-xs font-medium">{userSubscription}</span>
+          </Badge>
         </div>
       </header>
 
