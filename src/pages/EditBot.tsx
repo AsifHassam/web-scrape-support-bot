@@ -13,6 +13,7 @@ import { scrapeWebsite } from "@/utils/scraper";
 import { generateEmbedCode } from "@/utils/generateEmbedCode";
 import ChatbotEmulator from "@/components/ChatbotEmulator";
 import ChatbotStylingForm from "@/components/ChatbotStylingForm";
+import BotStatusToggle from "@/components/BotStatusToggle";
 
 const EditBot = () => {
   const [bot, setBot] = useState<any>(null);
@@ -21,8 +22,12 @@ const EditBot = () => {
   const [botColor, setBotColor] = useState("#3b82f6"); // Default color
   const [botName, setBotName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [isLive, setIsLive] = useState(false);
+  const [liveBotCount, setLiveBotCount] = useState(0);
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('FREE');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     const fetchBot = async () => {
@@ -39,6 +44,7 @@ const EditBot = () => {
         setBot(data);
         setBotName(data.name || "AI Assistant");
         setCompanyName(data.company || "Your Company");
+        setIsLive(data.is_live || false);
         
         // Since primary_color is not in the database schema yet, we'll just use our default state value
         // If we later add this column to the database, we can update this code
@@ -54,8 +60,50 @@ const EditBot = () => {
       }
     };
     
+    const fetchUserSubscription = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("users_metadata")
+          .select("payment_status")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        const status = data?.payment_status?.toUpperCase() || 'FREE';
+        if (status === 'PAID' || status === 'PRO') setSubscriptionTier('PRO');
+        else if (status === 'STARTER') setSubscriptionTier('STARTER');
+        else if (status === 'ENTERPRISE') setSubscriptionTier('ENTERPRISE');
+        else setSubscriptionTier('FREE');
+      } catch (error) {
+        console.error("Error fetching subscription:", error);
+        setSubscriptionTier('FREE');
+      }
+    };
+    
+    const fetchLiveBotCount = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error, count } = await supabase
+          .from("bots")
+          .select("*", { count: 'exact' })
+          .eq("user_id", user.id)
+          .eq("is_live", true);
+          
+        if (error) throw error;
+        setLiveBotCount(count || 0);
+      } catch (error) {
+        console.error("Error fetching live bot count:", error);
+      }
+    };
+    
     fetchBot();
-  }, [id]);
+    fetchUserSubscription();
+    fetchLiveBotCount();
+  }, [id, user]);
 
   useEffect(() => {
     const fetchKnowledgeSources = async () => {
@@ -176,6 +224,13 @@ const EditBot = () => {
     }
   }, [id]);
 
+  const handleBotStatusChange = async (status: boolean) => {
+    setIsLive(status);
+    
+    // We don't need to update the database here because the BotStatusToggle component will do it
+    // We only need to update the local state
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -203,6 +258,16 @@ const EditBot = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{bot.name}</h1>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+                <BotStatusToggle
+                  botId={id!}
+                  isLive={isLive}
+                  userSubscription={subscriptionTier}
+                  liveBotCount={liveBotCount}
+                  onStatusChange={handleBotStatusChange}
+                />
+              </div>
             </div>
             
             <Tabs defaultValue="analytics" className="space-y-6">

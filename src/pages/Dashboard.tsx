@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import SubscriptionStats from "@/components/SubscriptionStats";
 import { SubscriptionTier } from "@/lib/types/billing";
+import BotStatusToggle from "@/components/BotStatusToggle";
 
 interface Bot {
   id: string;
@@ -208,6 +209,14 @@ const Dashboard = () => {
     }
   };
 
+  const handleBotStatusChange = (botId: string, isLive: boolean) => {
+    setBots(prevBots => 
+      prevBots.map(bot => 
+        bot.id === botId ? { ...bot, is_live: isLive } : bot
+      )
+    );
+  };
+
   const formatBotType = (type?: string) => {
     if (!type) return "";
     
@@ -284,16 +293,13 @@ const Dashboard = () => {
                         {bot.name}
                       </h3>
                       <div className="flex space-x-2">
-                        {bot.is_live ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
-                            <span className="h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
-                            Live
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400">
-                            Draft
-                          </Badge>
-                        )}
+                        <BotStatusToggle
+                          botId={bot.id}
+                          isLive={bot.is_live || false}
+                          userSubscription={subscriptionTier}
+                          liveBotCount={liveBots}
+                          onStatusChange={(isLive) => handleBotStatusChange(bot.id, isLive)}
+                        />
                       </div>
                     </div>
                     

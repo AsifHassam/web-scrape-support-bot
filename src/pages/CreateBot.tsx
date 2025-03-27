@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +15,7 @@ import { normalizeUrl, isValidUrl } from '@/utils/urlUtils';
 import BotTypeSelector from '@/components/BotTypeSelector';
 import PaymentGateway from "@/components/PaymentGateway";
 import generateEmbedCode from '@/utils/generateEmbedCode';
+import { SUBSCRIPTION_LIMITS, SubscriptionTier } from "@/lib/types/billing";
 
 type BotType = 
   | 'educational' 
@@ -57,6 +57,9 @@ const CreateBot = () => {
   const [botId, setBotId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [urlScraped, setUrlScraped] = useState(false);
+  const [makeLive, setMakeLive] = useState(false);
+  const [liveBotCount, setLiveBotCount] = useState(0);
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('FREE');
   const { scrapeProgress, startScraping } = useScrapeWebsite();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +70,51 @@ const CreateBot = () => {
       setEmbedCode(code);
     }
   }, [botId]);
+
+  useEffect(() => {
+    const fetchUserSubscription = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("users_metadata")
+          .select("payment_status")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        const status = data?.payment_status?.toUpperCase() || 'FREE';
+        if (status === 'PAID' || status === 'PRO') setSubscriptionTier('PRO');
+        else if (status === 'STARTER') setSubscriptionTier('STARTER');
+        else if (status === 'ENTERPRISE') setSubscriptionTier('ENTERPRISE');
+        else setSubscriptionTier('FREE');
+      } catch (error) {
+        console.error("Error fetching subscription:", error);
+        setSubscriptionTier('FREE');
+      }
+    };
+    
+    const fetchLiveBotCount = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error, count } = await supabase
+          .from("bots")
+          .select("*", { count: 'exact' })
+          .eq("user_id", user.id)
+          .eq("is_live", true);
+          
+        if (error) throw error;
+        setLiveBotCount(count || 0);
+      } catch (error) {
+        console.error("Error fetching live bot count:", error);
+      }
+    };
+    
+    fetchUserSubscription();
+    fetchLiveBotCount();
+  }, [user, botId]);
 
   const handleScrapeWebsite = async () => {
     if (!formData.knowledgeSources.websiteUrl) {
@@ -154,6 +202,15 @@ const CreateBot = () => {
     if (step === 3) {
       setLoading(true);
       try {
+        // Check if user can create a live bot
+        if (makeLive) {
+          const maxLiveBots = SUBSCRIPTION_LIMITS[subscriptionTier].maxLiveBots;
+          if (liveBotCount >= maxLiveBots) {
+            toast.error(`Your ${subscriptionTier} plan allows a maximum of ${maxLiveBots} live bots. Please upgrade your plan or set another bot to draft.`);
+            setMakeLive(false);
+          }
+        }
+        
         // Create the bot first
         const { data: botData, error: botError } = await supabase
           .from("bots")
@@ -162,6 +219,7 @@ const CreateBot = () => {
             company: formData.company,
             bot_type: formData.botType,
             user_id: user?.id,
+            is_live: makeLive,
           })
           .select()
           .single();
@@ -541,6 +599,26 @@ const CreateBot = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="makeLive" 
+                    checked={makeLive}
+                    onCheckedChange={(checked) => setMakeLive(checked as boolean)}
+                  />
+                  <label 
+                    htmlFor="makeLive" 
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                  >
+                    Make this bot live immediately
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                  Your {subscriptionTier} plan allows {SUBSCRIPTION_LIMITS[subscriptionTier].maxLiveBots} live bot(s). 
+                  You currently have {liveBotCount} live bot(s).
+                </p>
               </div>
             </div>
           </div>

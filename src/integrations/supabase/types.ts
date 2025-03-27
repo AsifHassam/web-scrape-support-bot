@@ -71,6 +71,7 @@ export type Database = {
           company: string | null
           created_at: string | null
           id: string
+          is_live: boolean | null
           name: string
           updated_at: string | null
           user_id: string
@@ -80,6 +81,7 @@ export type Database = {
           company?: string | null
           created_at?: string | null
           id?: string
+          is_live?: boolean | null
           name: string
           updated_at?: string | null
           user_id: string
@@ -89,6 +91,7 @@ export type Database = {
           company?: string | null
           created_at?: string | null
           id?: string
+          is_live?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
