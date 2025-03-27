@@ -14,6 +14,8 @@ import ChatbotEmulator from "@/components/ChatbotEmulator";
 import { initialScrapeProgress } from "@/utils/scraper";
 import { normalizeUrl, isValidUrl } from '@/utils/urlUtils';
 import BotTypeSelector from '@/components/BotTypeSelector';
+import PaymentGateway from "@/components/PaymentGateway";
+import generateEmbedCode from '@/utils/generateEmbedCode';
 
 type BotType = 
   | 'educational' 
@@ -65,23 +67,6 @@ const CreateBot = () => {
       setEmbedCode(code);
     }
   }, [botId]);
-
-  const generateEmbedCode = (botId: string) => {
-    return `<script>
-  (function(w, d, s, o, f, js, fjs) {
-    w['ChatwiseWidget'] = o;
-    w[o] = w[o] || function() {
-      (w[o].q = w[o].q || []).push(arguments)
-    };
-    js = d.createElement(s), fjs = d.getElementsByTagName(s)[0];
-    js.id = o;
-    js.src = f;
-    js.async = 1;
-    fjs.parentNode.insertBefore(js, fjs);
-  }(window, document, 'script', 'cw', 'https://web-scrape-support-bot.lovable.app/widget.js'));
-  cw('init', { botId: '${botId}' });
-</script>`;
-  };
 
   const handleScrapeWebsite = async () => {
     if (!formData.knowledgeSources.websiteUrl) {
@@ -222,7 +207,7 @@ const CreateBot = () => {
         }
 
         toast.success("Chatbot created successfully!");
-        setStep(4);
+        setStep(4); // Go to payment step
       } catch (error: any) {
         toast.error("Error creating bot: " + error.message);
       } finally {
@@ -235,6 +220,14 @@ const CreateBot = () => {
 
   const handlePrevious = () => {
     setStep(step - 1);
+  };
+
+  const handlePaymentComplete = () => {
+    setStep(5); // Go to embed code step after payment
+  };
+
+  const handlePaymentCancel = () => {
+    setStep(3); // Go back to review step
   };
 
   const copyToClipboard = () => {
@@ -277,13 +270,13 @@ const CreateBot = () => {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          {step === 4 ? "Your Bot is Ready!" : "Create New Chatbot"}
+          {step === 5 ? "Your Bot is Ready!" : "Create New Chatbot"}
         </h1>
 
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-8 dark:bg-gray-700">
           <div
             className="bg-primary h-2.5 rounded-full transition-all duration-300"
-            style={{ width: `${(step / 4) * 100}%` }}
+            style={{ width: `${(step / 5) * 100}%` }}
           ></div>
         </div>
 
@@ -556,9 +549,17 @@ const CreateBot = () => {
         )}
 
         {step === 4 && (
+          <PaymentGateway 
+            botId={botId || ""} 
+            onPaymentComplete={handlePaymentComplete}
+            onCancel={handlePaymentCancel}
+          />
+        )}
+
+        {step === 5 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-              Step 4: Implementation
+              Implementation
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
               Add this code to your website to embed the chatbot
@@ -608,7 +609,7 @@ const CreateBot = () => {
           </div>
         )}
 
-        {step < 4 && (
+        {step < 5 && (
           <div className="flex justify-between mt-8">
             {step > 1 ? (
               <Button variant="outline" onClick={handlePrevious}>
@@ -617,10 +618,12 @@ const CreateBot = () => {
             ) : (
               <div></div>
             )}
-            <Button onClick={handleNext} disabled={loading}>
-              {step === 3 ? (loading ? "Creating..." : "Create Bot") : "Next"}
-              {step < 3 && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
+            {step !== 4 && (
+              <Button onClick={handleNext} disabled={loading}>
+                {step === 3 ? (loading ? "Creating..." : "Create Bot") : "Next"}
+                {step < 3 && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            )}
           </div>
         )}
       </div>
