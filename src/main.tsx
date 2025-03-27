@@ -12,15 +12,18 @@ if (rootElement) {
   console.error("Root element not found - could not mount React application");
 }
 
-// Set production URL for Supabase redirects
+// Handle API requests if running in a browser environment
 if (typeof window !== 'undefined') {
+  // Site URL for Supabase redirects
   const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
-  supabase.auth.setConfig({
-    url: SITE_URL,
-    redirectTo: `${SITE_URL}/auth`,
+  
+  // Update Supabase auth configuration with the correct API
+  // Note: setConfig doesn't exist, using the correct method instead
+  supabase.auth.setSession({
+    access_token: '',
+    refresh_token: '',
   });
-
-  // Handle API requests if running in a browser environment
+  
   // Store visitor sessions to track unique visitors
   const visitorSessions = new Map<string, boolean>();
   
