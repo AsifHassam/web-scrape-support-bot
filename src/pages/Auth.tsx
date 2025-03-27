@@ -18,6 +18,8 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+  const [emailExistsMessage, setEmailExistsMessage] = useState<string | null>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +57,36 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const checkEmailExists = async (email: string) => {
+    try {
+      setIsCheckingEmail(true);
+      
+      // Try to sign up with an empty password to check if the email exists
+      // This is a technique to use Supabase's auth system to check for existing users
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: "temporary_password_for_check_only",
+      });
+      
+      let exists = false;
+      
+      // Email already registered error indicates the email exists
+      if (error?.message?.includes("User already registered")) {
+        exists = true;
+        setEmailExistsMessage("This email is already registered. Would you like to sign in or reset your password?");
+      } else {
+        setEmailExistsMessage(null);
+      }
+      
+      return exists;
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return false;
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,6 +122,15 @@ const Auth = () => {
         toast.success("Successfully logged in!");
         navigate("/dashboard");
       } else {
+        // Check if email exists before attempting signup
+        const emailExists = await checkEmailExists(email);
+        
+        if (emailExists) {
+          // Email exists, don't proceed with signup
+          setLoading(false);
+          return;
+        }
+        
         // Direct signup without the bot type selection
         const { error, data } = await signUp(email, password);
         if (error) {
@@ -113,6 +154,16 @@ const Auth = () => {
   const handleBackToLogin = () => {
     setIsForgotPassword(false);
     setResetPasswordSuccess(false);
+    setEmailExistsMessage(null);
+  };
+
+  const handleBlurEmail = async () => {
+    // Only check email existence on sign up form and when we have a valid email
+    if (!isLogin && email && email.match(/\S+@\S+\.\S+/)) {
+      await checkEmailExists(email);
+    } else {
+      setEmailExistsMessage(null);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -243,10 +294,43 @@ const Auth = () => {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={handleBlurEmail}
                   className={errors.email ? "border-red-500" : ""}
                 />
                 {errors.email && (
                   <p className="text-sm text-red-500">{errors.email}</p>
+                )}
+                {isCheckingEmail && (
+                  <p className="text-sm text-gray-500">Checking email...</p>
+                )}
+                {emailExistsMessage && (
+                  <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md text-sm">
+                    <p className="text-blue-700 dark:text-blue-300">{emailExistsMessage}</p>
+                    <div className="flex space-x-2 mt-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setIsLogin(true);
+                          setEmailExistsMessage(null);
+                        }}
+                      >
+                        Sign In
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setIsForgotPassword(true);
+                          setEmailExistsMessage(null);
+                        }}
+                      >
+                        Reset Password
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -275,7 +359,7 @@ const Auth = () => {
                 </button>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || isCheckingEmail || !!emailExistsMessage}>
                 {loading
                   ? "Processing..."
                   : isLogin
@@ -324,13 +408,14 @@ const Auth = () => {
           </>
         )}
 
-        {!isForgotPassword && (
+        {!isForgotPassword && !emailExistsMessage && (
           <div className="text-center pt-2">
             <button
               type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setErrors({});
+                setEmailExistsMessage(null);
               }}
               className="text-sm text-primary hover:underline"
             >
