@@ -14,8 +14,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Save, PlusCircle } from "lucide-react";
 import { SubscriptionTier } from "@/lib/types/billing";
 
+// Define the allowed knowledge source types as a type
+type KnowledgeSourceType = "website" | "text" | "file";
+
 interface KnowledgeSource {
-  type: "website" | "text" | "file";
+  type: KnowledgeSourceType;
   content: string;
 }
 
@@ -39,7 +42,7 @@ const CreateBot = () => {
 
   const handleKnowledgeSourceChange = (
     index: number,
-    type: "website" | "text" | "file",
+    type: KnowledgeSourceType,
     content: string
   ) => {
     const updatedSources = [...knowledgeSources];
@@ -233,7 +236,7 @@ const CreateBot = () => {
                 <div className="space-y-2">
                   <Label htmlFor={`type-${index}`}>Type</Label>
                   <Select
-                    onValueChange={(value) =>
+                    onValueChange={(value: KnowledgeSourceType) =>
                       handleKnowledgeSourceChange(index, value, source.content)
                     }
                     defaultValue={source.type}
