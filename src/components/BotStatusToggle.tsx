@@ -1,10 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_LIMITS, SubscriptionTier } from "@/lib/types/billing";
 import SubscriptionUpgradeDialog from "@/components/billing/SubscriptionUpgradeDialog";
 
@@ -30,6 +28,25 @@ const BotStatusToggle = ({
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const { toast } = useToast();
   const maxLiveBots = SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots;
+
+  // Re-check live bot count when trying to activate a bot
+  useEffect(() => {
+    if (!isLive && upgradeDialogOpen) {
+      const checkLiveBots = async () => {
+        const { data, error } = await supabase
+          .from('bots')
+          .select('id')
+          .eq('is_live', true);
+          
+        if (!error && data && data.length < maxLiveBots) {
+          // User deactivated another bot elsewhere, allow activation
+          setUpgradeDialogOpen(false);
+        }
+      };
+      
+      checkLiveBots();
+    }
+  }, [liveBotCount, maxLiveBots, isLive, upgradeDialogOpen]);
 
   const handleToggle = async (checked: boolean, e: React.MouseEvent | React.ChangeEvent) => {
     // Stop event propagation to prevent card click
