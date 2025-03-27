@@ -1,10 +1,12 @@
 
+import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowUp } from "lucide-react";
 import { SUBSCRIPTION_LIMITS, SubscriptionTier } from "@/lib/types/billing";
 import { useNavigate } from "react-router-dom";
+import SubscriptionUpgradeDialog from "@/components/billing/SubscriptionUpgradeDialog";
 
 interface SubscriptionStatsProps {
   tier: SubscriptionTier;
@@ -23,6 +25,7 @@ const SubscriptionStats = ({
 }: SubscriptionStatsProps) => {
   const navigate = useNavigate();
   const limits = SUBSCRIPTION_LIMITS[tier];
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   
   const calculatePercentage = (current: number, max: number) => {
     return Math.min(Math.round((current / max) * 100), 100);
@@ -101,12 +104,18 @@ const SubscriptionStats = ({
         <Button 
           className="w-full flex items-center justify-center gap-2" 
           variant="default"
-          onClick={() => navigate("/pricing")}
+          onClick={() => setUpgradeDialogOpen(true)}
         >
           <ArrowUp className="h-4 w-4" />
           Upgrade Plan
         </Button>
       )}
+      
+      <SubscriptionUpgradeDialog 
+        open={upgradeDialogOpen} 
+        onOpenChange={setUpgradeDialogOpen}
+        currentTier={tier}
+      />
     </div>
   );
 };

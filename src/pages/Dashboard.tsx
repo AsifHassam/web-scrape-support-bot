@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,13 +48,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const getSubscriptionTier = (): SubscriptionTier => {
-    if (!userProfile) return 'FREE';
+    if (!userProfile) return 'TRIAL';
     
     const status = userProfile.payment_status.toUpperCase();
     if (status === 'PAID' || status === 'PRO') return 'PRO';
     if (status === 'STARTER') return 'STARTER';
     if (status === 'ENTERPRISE') return 'ENTERPRISE';
-    return 'FREE';
+    return 'TRIAL';
   };
 
   useEffect(() => {
@@ -67,7 +66,6 @@ const Dashboard = () => {
           return;
         }
         
-        // Fetch user profile data
         const { data: profileData, error: profileError } = await supabase
           .from("users_metadata")
           .select("*")
@@ -79,7 +77,7 @@ const Dashboard = () => {
           if (profileError.code === 'PGRST116') {
             const { data: newProfile, error: insertError } = await supabase
               .from("users_metadata")
-              .insert([{ id: user.id, payment_status: 'FREE' }])
+              .insert([{ id: user.id, payment_status: 'TRIAL' }])
               .select()
               .single();
             
@@ -95,7 +93,6 @@ const Dashboard = () => {
           setUserProfile(profileData as UserProfile);
         }
         
-        // Fetch bots with their actual is_live status from the database
         const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("*")
@@ -391,7 +388,7 @@ const Dashboard = () => {
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => navigate("/pricing")}
+                      onClick={() => setUpgradeDialogOpen(true)}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Upgrade to Add Team Members

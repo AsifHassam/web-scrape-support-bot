@@ -40,7 +40,7 @@ export type Invoice = {
   created_at: string;
 };
 
-export type SubscriptionTier = 'STARTER' | 'PRO' | 'ENTERPRISE' | 'FREE';
+export type SubscriptionTier = 'STARTER' | 'PRO' | 'ENTERPRISE' | 'TRIAL';
 
 export type SubscriptionLimits = {
   maxMessages: number;
@@ -53,7 +53,7 @@ export type SubscriptionLimits = {
 };
 
 export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, SubscriptionLimits> = {
-  FREE: {
+  TRIAL: {
     maxMessages: 100,
     maxConversations: 20,
     maxTeamMembers: 1,

@@ -17,14 +17,14 @@ interface UserData {
   created_at: string;
   last_sign_in_at: string | null;
   status: 'ACTIVE' | 'BLOCKED';
-  payment_status: 'FREE' | 'PAID' | 'TRIAL';
+  payment_status: 'TRIAL' | 'PAID' | 'STARTER' | 'PRO' | 'ENTERPRISE';
 }
 
 interface UserTableProps {
   users: UserData[];
   onBlockUser: (userId: string, status: 'ACTIVE' | 'BLOCKED') => void;
   onDeleteClick: (user: UserData) => void;
-  updatePaymentStatus: (userId: string, newStatus: 'FREE' | 'PAID' | 'TRIAL') => void;
+  updatePaymentStatus: (userId: string, newStatus: 'TRIAL' | 'PAID' | 'STARTER' | 'PRO' | 'ENTERPRISE') => void;
 }
 
 const UserTable: React.FC<UserTableProps> = ({
@@ -71,13 +71,14 @@ const UserTable: React.FC<UserTableProps> = ({
                     value={user.payment_status}
                     onChange={(e) => updatePaymentStatus(
                       user.id, 
-                      e.target.value as 'FREE' | 'PAID' | 'TRIAL'
+                      e.target.value as 'TRIAL' | 'PAID' | 'STARTER' | 'PRO' | 'ENTERPRISE'
                     )}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white py-1 px-2"
                   >
-                    <option value="FREE">FREE</option>
                     <option value="TRIAL">TRIAL</option>
-                    <option value="PAID">PAID</option>
+                    <option value="STARTER">STARTER</option>
+                    <option value="PRO">PRO</option>
+                    <option value="ENTERPRISE">ENTERPRISE</option>
                   </select>
                 </div>
               </TableCell>
