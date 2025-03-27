@@ -13,10 +13,10 @@ const UserSearchBar: React.FC<UserSearchBarProps> = ({
   onSearchChange
 }) => {
   return (
-    <div className="relative w-full sm:w-64">
+    <div className="relative w-full sm:w-72">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
       <Input
-        placeholder="Search users..."
+        placeholder="Search users by email..."
         className="pl-10"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}

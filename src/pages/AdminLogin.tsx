@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,16 @@ const AdminLogin = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
+        // Check if the user is hello@liorra.io (automatic admin)
+        if (user.email === "hello@liorra.io") {
+          console.log("Already logged in as admin email, redirecting to dashboard");
+          localStorage.setItem("adminAuthenticated", "true");
+          localStorage.setItem("adminAuthTime", Date.now().toString());
+          navigate("/admin", { replace: true });
+          return;
+        }
+
+        // Otherwise check localStorage
         const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
         if (adminAuthenticated) {
           console.log("Already logged in as admin, redirecting to dashboard");
@@ -37,13 +46,30 @@ const AdminLogin = () => {
     setError("");
 
     try {
-      // Check if the admin credentials are valid
-      if (username === "admin" && password === "Liorra2025!") {
+      // Support two login methods:
+      // 1. Username/password combination: admin/Liorra2025!
+      // 2. Email/password combination: hello@liorra.io/Liorra2025!
+      
+      if ((username === "admin" && password === "Liorra2025!") || 
+          (username === "hello@liorra.io" && password === "Liorra2025!")) {
         console.log("Admin credentials valid");
         
-        // First ensure the user is logged in to Supabase with admin account
-        if (!user) {
-          console.log("Attempting to authenticate with Supabase");
+        // If trying to login with hello@liorra.io, ensure user is logged in to Supabase with that account
+        if (username === "hello@liorra.io") {
+          if (!user || user.email !== "hello@liorra.io") {
+            console.log("Attempting to authenticate with Supabase as hello@liorra.io");
+            const { error } = await signIn("hello@liorra.io", "Liorra2025!");
+            
+            if (error) {
+              console.error("Failed to authenticate with Supabase:", error);
+              setError("Authentication error: " + error.message);
+              setLoading(false);
+              return;
+            }
+          }
+        } else if (!user) {
+          // If not hello@liorra.io but no user is logged in, use admin account
+          console.log("Logging in with admin account via hello@liorra.io");
           const { error } = await signIn("hello@liorra.io", "Liorra2025!");
           
           if (error) {
@@ -52,13 +78,10 @@ const AdminLogin = () => {
             setLoading(false);
             return;
           }
-        } else {
-          // Check if current user is admin
-          if (user.email !== "hello@liorra.io") {
-            setError("Current logged in user is not an admin. Please log out first.");
-            setLoading(false);
-            return;
-          }
+        } else if (user.email !== "hello@liorra.io") {
+          setError("Current logged in user is not an admin. Please log out first.");
+          setLoading(false);
+          return;
         }
         
         // Store admin status in localStorage with timestamp
