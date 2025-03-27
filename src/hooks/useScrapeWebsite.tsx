@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrapeProgress, ScrapeStatus, initialScrapeProgress } from '@/utils/scraper';
 import { normalizeUrl } from '@/utils/urlUtils';
 
