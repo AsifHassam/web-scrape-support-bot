@@ -9,13 +9,299 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admin_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_admin: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_admin?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+        }
+        Relationships: []
+      }
+      bots: {
+        Row: {
+          bot_type: string | null
+          company: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bot_type?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bot_type?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          bot_id: string | null
+          created_at: string | null
+          customer_email: string | null
+          customer_location: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          read: boolean | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_location?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          read?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_location?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          read?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      knowledge_sources: {
+        Row: {
+          bot_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          source_type: string
+        }
+        Insert: {
+          bot_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          source_type: string
+        }
+        Update: {
+          bot_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_sources_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          read: boolean | null
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          card_type: string
+          created_at: string | null
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean | null
+          last_four: string
+          provider: string
+          user_id: string | null
+        }
+        Insert: {
+          card_type: string
+          created_at?: string | null
+          exp_month: number
+          exp_year: number
+          id?: string
+          is_default?: boolean | null
+          last_four: string
+          provider: string
+          user_id?: string | null
+        }
+        Update: {
+          card_type?: string
+          created_at?: string | null
+          exp_month?: number
+          exp_year?: number
+          id?: string
+          is_default?: boolean | null
+          last_four?: string
+          provider?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          display_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          display_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      users_metadata: {
+        Row: {
+          created_at: string | null
+          id: string
+          payment_status: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          payment_status?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payment_status?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
