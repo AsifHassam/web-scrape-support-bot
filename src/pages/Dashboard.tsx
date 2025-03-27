@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import SubscriptionStats from "@/components/SubscriptionStats";
 import { SubscriptionTier } from "@/lib/types/billing";
-import BotStatusToggle from "@/components/BotStatusToggle";
 
 interface Bot {
   id: string;
@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [deletingBotId, setDeletingBotId] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [teamMemberCount, setTeamMemberCount] = useState(1);
   const [totalMessages, setTotalMessages] = useState(0);
   const [totalConversations, setTotalConversations] = useState(0);
@@ -297,13 +298,13 @@ const Dashboard = () => {
                         {bot.name}
                       </h3>
                       <div className="flex space-x-2">
-                        <BotStatusToggle
-                          botId={bot.id}
-                          isLive={bot.is_live || false}
-                          userSubscription={subscriptionTier}
-                          liveBotCount={liveBots}
-                          onStatusChange={(isLive) => handleBotStatusChange(bot.id, isLive)}
-                        />
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          bot.is_live 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
+                          {bot.is_live ? 'Live' : 'Draft'}
+                        </span>
                       </div>
                     </div>
                     

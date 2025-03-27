@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,7 +53,7 @@ const Profile = () => {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [userSubscription, setUserSubscription] = useState<SubscriptionTier>('FREE');
+  const [userSubscription, setUserSubscription] = useState<SubscriptionTier>('TRIAL');
   
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -69,20 +70,22 @@ const Profile = () => {
           .from("user_profiles")
           .select("*")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         
-        setProfile(data);
-        setDisplayName(data.display_name || "");
-        setBio(data.bio || "");
-        setAvatarUrl(data.avatar_url || "");
+        if (data) {
+          setProfile(data);
+          setDisplayName(data.display_name || "");
+          setBio(data.bio || "");
+          setAvatarUrl(data.avatar_url || "");
+        }
         
         const { data: metaData, error: metaError } = await supabase
           .from("users_metadata")
           .select("payment_status")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
           
         if (!metaError && metaData) {
           const status = metaData.payment_status.toUpperCase();
@@ -93,7 +96,7 @@ const Profile = () => {
           } else if (status === 'ENTERPRISE') {
             setUserSubscription('ENTERPRISE');
           } else {
-            setUserSubscription('FREE');
+            setUserSubscription('TRIAL');
           }
         }
       } catch (error: any) {

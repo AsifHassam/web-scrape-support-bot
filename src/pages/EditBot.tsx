@@ -25,7 +25,7 @@ const EditBot = () => {
   const [companyName, setCompanyName] = useState("");
   const [isLive, setIsLive] = useState(false);
   const [liveBotCount, setLiveBotCount] = useState(0);
-  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('FREE');
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('TRIAL');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -231,6 +231,40 @@ const EditBot = () => {
     // We don't need to update the database here because the BotStatusToggle component will do it
     // We only need to update the local state
   };
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("users_metadata")
+          .select("payment_status")
+          .eq("id", user.id)
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (data) {
+          const status = data.payment_status.toUpperCase();
+          if (status === 'PAID' || status === 'PRO') {
+            setSubscriptionTier('PRO');
+          } else if (status === 'STARTER') {
+            setSubscriptionTier('STARTER');
+          } else if (status === 'ENTERPRISE') {
+            setSubscriptionTier('ENTERPRISE');
+          } else {
+            setSubscriptionTier('TRIAL');
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscription:", error);
+        setSubscriptionTier('TRIAL');
+      }
+    };
+    
+    fetchSubscriptionStatus();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
