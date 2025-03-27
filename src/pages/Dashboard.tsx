@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,6 +67,7 @@ const Dashboard = () => {
           return;
         }
         
+        // Fetch user profile data
         const { data: profileData, error: profileError } = await supabase
           .from("users_metadata")
           .select("*")
@@ -93,6 +95,7 @@ const Dashboard = () => {
           setUserProfile(profileData as UserProfile);
         }
         
+        // Fetch bots with their actual is_live status from the database
         const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("*")
@@ -114,13 +117,13 @@ const Dashboard = () => {
             
             if (countError) {
               console.error("Error fetching conversation count:", countError);
-              return { ...bot, active_conversations: 0, is_live: Math.random() > 0.5 };
+              return { ...bot, active_conversations: 0 };
             }
             
-            return { ...bot, active_conversations: count || 0, is_live: Math.random() > 0.5 };
+            return { ...bot, active_conversations: count || 0 };
           } catch (error) {
             console.error("Error processing bot data:", error);
-            return { ...bot, active_conversations: 0, is_live: false };
+            return { ...bot, active_conversations: 0 };
           }
         }));
         
