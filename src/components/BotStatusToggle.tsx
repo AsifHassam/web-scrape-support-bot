@@ -3,7 +3,10 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_LIMITS, SubscriptionTier } from "@/lib/types/billing";
+import SubscriptionUpgradeDialog from "@/components/billing/SubscriptionUpgradeDialog";
 
 interface BotStatusToggleProps {
   botId: string;
@@ -24,6 +27,7 @@ const BotStatusToggle = ({
 }: BotStatusToggleProps) => {
   const [loading, setLoading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(isLive);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const { toast } = useToast();
   const maxLiveBots = SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots;
 
@@ -31,13 +35,9 @@ const BotStatusToggle = ({
     // Stop event propagation to prevent card click
     e.stopPropagation();
     
-    // If trying to set a bot live and we're at the limit, prevent the change
+    // If trying to set a bot live and we're at the limit, show upgrade dialog
     if (checked && liveBotCount >= maxLiveBots && !isLive) {
-      toast({
-        title: "Subscription limit reached",
-        description: `Your ${userSubscription} plan allows a maximum of ${maxLiveBots} live bots. Please upgrade your plan or set another bot to draft.`,
-        variant: "destructive",
-      });
+      setUpgradeDialogOpen(true);
       return;
     }
 
@@ -74,17 +74,25 @@ const BotStatusToggle = ({
   };
 
   return (
-    <div className={`flex items-center space-x-2 ${className}`} onClick={(e) => e.stopPropagation()}>
-      <Switch
-        checked={currentStatus}
-        onCheckedChange={(checked) => handleToggle(checked, window.event || {} as any)}
-        disabled={loading}
-        className={loading ? "opacity-50 cursor-not-allowed" : ""}
+    <>
+      <div className={`flex items-center space-x-2 ${className}`} onClick={(e) => e.stopPropagation()}>
+        <Switch
+          checked={currentStatus}
+          onCheckedChange={(checked) => handleToggle(checked, window.event || {} as any)}
+          disabled={loading}
+          className={loading ? "opacity-50 cursor-not-allowed" : ""}
+        />
+        <span className="text-sm font-medium">
+          {currentStatus ? "Live" : "Draft"}
+        </span>
+      </div>
+      
+      <SubscriptionUpgradeDialog 
+        open={upgradeDialogOpen} 
+        onOpenChange={setUpgradeDialogOpen}
+        currentTier={userSubscription}
       />
-      <span className="text-sm font-medium">
-        {currentStatus ? "Live" : "Draft"}
-      </span>
-    </div>
+    </>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -18,7 +19,6 @@ if (typeof window !== 'undefined') {
   const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
   
   // Update Supabase auth configuration with the correct API
-  // Note: setConfig doesn't exist, using the correct method instead
   supabase.auth.setSession({
     access_token: '',
     refresh_token: '',
@@ -68,6 +68,21 @@ if (typeof window !== 'undefined') {
       }
       
       try {
+        // Verify the bot is live before responding
+        const { data: botData, error: botError } = await supabase
+          .from("bots")
+          .select("is_live")
+          .eq("id", botId)
+          .single();
+          
+        if (botError) {
+          throw new Error(`Bot not found: ${botError.message}`);
+        }
+          
+        if (!botData.is_live) {
+          throw new Error("This bot is not currently active");
+        }
+        
         // Update analytics
         try {
           const analyticsResponse = await fetch(
