@@ -25,7 +25,22 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       }
       
       try {
-        // Check admin status in the database using our is_admin function
+        // Check if we have a cached admin status that's still valid (within 15 minutes)
+        const cachedAdminTime = localStorage.getItem("adminAuthTime");
+        const cachedAdminStatus = localStorage.getItem("adminAuthenticated");
+        const validCache = cachedAdminStatus === "true" && 
+          cachedAdminTime && 
+          (Date.now() - parseInt(cachedAdminTime)) < 15 * 60 * 1000;
+          
+        if (validCache) {
+          console.log("AdminRoute: using cached admin status (valid)");
+          setIsAdmin(true);
+          setCheckingAdmin(false);
+          return;
+        }
+        
+        // If cache is invalid or not present, check admin status in the database
+        console.log("AdminRoute: checking admin status in database");
         const { data, error } = await supabase.rpc('is_admin', {
           user_id: user.id
         });
@@ -37,11 +52,14 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
           console.log("AdminRoute: admin status =", data);
           setIsAdmin(data === true);
           
-          // If admin, we still store this in localStorage for faster checks
+          // If admin, we store this in localStorage for faster checks
           // on subsequent requests, but the source of truth is the database
           if (data === true) {
             localStorage.setItem("adminAuthenticated", "true");
             localStorage.setItem("adminAuthTime", Date.now().toString());
+          } else {
+            localStorage.removeItem("adminAuthenticated");
+            localStorage.removeItem("adminAuthTime");
           }
         }
       } catch (error) {

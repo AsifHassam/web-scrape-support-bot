@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +10,7 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Production URL for redirects
-const SITE_URL = 'https://web-scrape-support-bot.lovable.app';
+const SITE_URL = window.location.origin || 'https://web-scrape-support-bot.lovable.app';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(false); // Default to sign up instead of login
@@ -53,22 +52,66 @@ const Auth = () => {
   }, [cooldownActive, cooldownSeconds]);
 
   useEffect(() => {
+    console.log("Auth page: checking user state", user?.email);
+    
     if (user) {
+      console.log("User is logged in, redirecting to dashboard");
       navigate("/dashboard");
+      return;
     }
     
-    // Check if the URL has a specific query param to show signup
+    // Check if we're on this page because of a password reset or email confirmation
     const params = new URLSearchParams(location.search);
-    if (params.get('signup') === 'true') {
-      setIsLogin(false);
-    }
-
+    const resetToken = params.get('token') || params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    
+    console.log("Auth page URL params:", { type, hasToken: !!resetToken });
+    
+    // Handle callback URLs with tokens (for password resets, email confirmation)
+    const handleAuthCallback = async () => {
+      if (resetToken && type === 'recovery') {
+        // This is a password reset flow
+        console.log("Handling password reset flow");
+        // Show password reset form
+        setIsForgotPassword(true);
+      } else if (resetToken && refreshToken) {
+        // This is probably an email confirmation or OAuth callback
+        console.log("Detected auth tokens in URL, exchanging session");
+        
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: resetToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error("Error setting session from URL params:", error);
+            toast.error("Authentication failed. Please try signing in again.");
+          } else if (data.session) {
+            console.log("Successfully set session from URL params");
+            toast.success("Authentication successful!");
+            navigate("/dashboard");
+          }
+        } catch (error) {
+          console.error("Exception when handling auth callback:", error);
+        }
+      }
+      
+      // Check URL for signup parameter
+      if (params.get('signup') === 'true') {
+        setIsLogin(false);
+      }
+    };
+    
+    handleAuthCallback();
+    
     // Check if we need to auto login after signup
     if (autoLoginAfterSignup && email && password) {
       handleAutoLogin();
       setAutoLoginAfterSignup(false);
     }
-  }, [user, navigate, location, autoLoginAfterSignup]);
+  }, [user, navigate, location, autoLoginAfterSignup, email, password]);
 
   const handleAutoLogin = async () => {
     try {
@@ -147,24 +190,13 @@ const Auth = () => {
     }
   };
 
-  // Helper to manually verify user email in development
   const verifyUserEmailManually = async (email: string) => {
     try {
       console.log("Attempting to manually verify email:", email);
       
-      // For admin accounts with hello@liorra.io email, let's specifically check and set admin status
-      if (email === 'hello@liorra.io') {
-        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin', {
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        });
-        
-        if (isAdminError) {
-          console.error("Error checking admin status:", isAdminError);
-        } else {
-          console.log("User admin status:", isAdminData);
-        }
-      }
-
+      // In development, we'd have logic to manually verify the user
+      // This is just a placeholder - in production, users should verify through email
+      
       return true;
     } catch (error) {
       console.error("Error verifying email manually:", error);
@@ -186,52 +218,38 @@ const Auth = () => {
 
     try {
       if (isForgotPassword) {
+        console.log("Sending password reset email to:", email);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${SITE_URL}/auth?reset=true`,
         });
         
         if (error) {
-          // Handle rate limiting error
-          if (error.message.includes("For security purposes, you can only request this")) {
-            const secondsMatch = error.message.match(/after (\d+) seconds/);
-            const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-            
-            setCooldownSeconds(waitSeconds);
-            setCooldownActive(true);
-            toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
-          } else {
-            toast.error(error.message);
-          }
+          handleRateLimitingError(error);
           throw error;
         }
         
         setResetPasswordSuccess(true);
         toast.success("Password reset email sent! Check your inbox.");
       } else if (isLogin) {
+        console.log("Attempting to login with email:", email);
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes("Email not confirmed")) {
+          if (error.message?.includes("Email not confirmed")) {
             toast.error("Please confirm your email before logging in");
             
-            // In development, offer to manually verify the email
-            const manualVerification = await verifyUserEmailManually(email);
-            if (manualVerification) {
-              toast.success("Email verified manually. Please try logging in again.");
-              // Trigger auto-login after a delay
-              setTimeout(() => handleAutoLogin(), 1500);
+            // In development environment only, offer to manually verify the email
+            if (process.env.NODE_ENV === 'development') {
+              const manualVerification = await verifyUserEmailManually(email);
+              if (manualVerification) {
+                toast.success("Email verified manually. Please try logging in again.");
+                // Trigger auto-login after a delay
+                setTimeout(() => handleAutoLogin(), 1500);
+              }
             }
-          } else if (error.message.includes("Invalid login credentials")) {
+          } else if (error.message?.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
-          } else if (error.message.includes("For security purposes, you can only request this")) {
-            // Handle rate limiting error
-            const secondsMatch = error.message.match(/after (\d+) seconds/);
-            const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-            
-            setCooldownSeconds(waitSeconds);
-            setCooldownActive(true);
-            toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
           } else {
-            toast.error(error.message);
+            handleRateLimitingError(error);
           }
           throw error;
         }
@@ -253,27 +271,19 @@ const Auth = () => {
           return;
         }
         
-        // Direct signup without the bot type selection
+        console.log("Attempting to sign up with email:", email);
         const { error, data } = await signUp(email, password);
         if (error) {
-          if (error.message.includes("User already registered")) {
+          if (error.message?.includes("User already registered")) {
             toast.error("This email is already registered");
-          } else if (error.message.includes("For security purposes, you can only request this")) {
-            // Handle rate limiting error
-            const secondsMatch = error.message.match(/after (\d+) seconds/);
-            const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-            
-            setCooldownSeconds(waitSeconds);
-            setCooldownActive(true);
-            toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
           } else {
-            toast.error(error.message);
+            handleRateLimitingError(error);
           }
           throw error;
         }
 
         // Dev environment: try to auto-verify email
-        if (data?.user?.id) {
+        if (process.env.NODE_ENV === 'development' && data?.user?.id) {
           const verified = await verifyUserEmailManually(email);
           if (verified) {
             toast.success("Email verified automatically in development. Logging you in...");
@@ -289,6 +299,20 @@ const Auth = () => {
       console.error("Auth error:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRateLimitingError = (error: any) => {
+    // Handle rate limiting error
+    if (error.message?.includes("For security purposes, you can only request this")) {
+      const secondsMatch = error.message.match(/after (\d+) seconds/);
+      const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
+      
+      setCooldownSeconds(waitSeconds);
+      setCooldownActive(true);
+      toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
+    } else {
+      toast.error(error.message || "Authentication error");
     }
   };
 
