@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -167,52 +166,12 @@ const Team = () => {
         return;
       }
       
-      // First check if the user already exists in the users_metadata table
-      const { data: existingUsersMeta, error: userMetaError } = await supabase
-        .from("users_metadata")
-        .select("id")
-        .eq("id", user.id);
-        
-      if (userMetaError) {
-        console.error("Error checking users_metadata:", userMetaError);
-      }
-      
-      // Extract member_id if the user already exists
-      const member_id = null; // We'll set this to null initially and handle it in the edge function
-      
-      const { data: memberData, error: memberError } = await supabase
-        .from("team_members")
-        .insert({
-          owner_id: user.id,
-          email: email.toLowerCase(),
-          role,
-          member_id
-        })
-        .select()
-        .single();
-        
-      if (memberError) {
-        if (memberError.code === "23505") {
-          toast.error("This email is already a team member");
-        } else {
-          throw memberError;
-        }
+      const existingMember = teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+      if (existingMember) {
+        toast.error("This email is already a team member");
         return;
       }
-      
-      if (selectedBots.length > 0) {
-        const botPermissions = selectedBots.map(botId => ({
-          team_member_id: memberData.id,
-          bot_id: botId
-        }));
-        
-        const { error: permissionsError } = await supabase
-          .from("bot_permissions")
-          .insert(botPermissions);
-          
-        if (permissionsError) throw permissionsError;
-      }
-      
+
       const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
       
       const response = await fetch(
@@ -226,7 +185,10 @@ const Team = () => {
           body: JSON.stringify({
             email,
             inviterEmail: user.email || "Team Owner",
-            signUpUrl: inviteUrl
+            signUpUrl: inviteUrl,
+            ownerId: user.id,
+            role: role,
+            selectedBots: selectedBots
           })
         }
       );
@@ -236,22 +198,54 @@ const Team = () => {
         throw new Error(errorData.error || 'Failed to send invitation');
       }
       
-      toast.success(`Invitation sent to ${email}`);
+      const responseData = await response.json();
       
-      const { data: refreshedMemberData, error: refreshError } = await supabase
-        .from("team_members")
-        .select("*")
-        .eq("id", memberData.id)
-        .single();
+      if (responseData.memberData) {
+        const memberBots = selectedBots.map(botId => {
+          const bot = bots.find(b => b.id === botId);
+          return bot ? { id: bot.id, name: bot.name } : null;
+        }).filter(Boolean);
         
-      if (refreshError) throw refreshError;
+        setTeamMembers([...teamMembers, { 
+          ...responseData.memberData, 
+          bots: memberBots 
+        } as TeamMember]);
+        
+        toast.success(`Invitation sent to ${email}`);
+      } else {
+        toast.success(responseData.message || `Team member operation completed`);
+        
+        const { data: refreshedMembers, error: refreshError } = await supabase
+          .from("team_members")
+          .select("*")
+          .eq("owner_id", user.id);
+          
+        if (!refreshError && refreshedMembers) {
+          const updatedTeamMembers = await Promise.all(refreshedMembers.map(async (member) => {
+            const { data: permissions } = await supabase
+              .from("bot_permissions")
+              .select("bot_id")
+              .eq("team_member_id", member.id);
+              
+            const memberBots = (permissions || []).map(p => {
+              const bot = bots.find(b => b.id === p.bot_id);
+              return bot ? { id: bot.id, name: bot.name } : null;
+            }).filter(Boolean);
+            
+            return {
+              ...member,
+              bots: memberBots
+            };
+          }));
+          
+          const ownerMember = teamMembers.find(m => m.isOwner);
+          setTeamMembers([
+            ...(ownerMember ? [ownerMember] : []), 
+            ...updatedTeamMembers as TeamMember[]
+          ]);
+        }
+      }
       
-      const memberBots = selectedBots.map(botId => {
-        const bot = bots.find(b => b.id === botId);
-        return bot ? { id: bot.id, name: bot.name } : null;
-      }).filter(Boolean);
-      
-      setTeamMembers([...teamMembers, { ...refreshedMemberData, bots: memberBots } as TeamMember]);
       setAddDialogOpen(false);
     } catch (error: any) {
       console.error("Error adding team member:", error);

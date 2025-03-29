@@ -15,7 +15,7 @@ serve(async (req) => {
 
   try {
     // Get request data
-    const { email, inviterEmail, signUpUrl } = await req.json();
+    const { email, inviterEmail, signUpUrl, ownerId, role, selectedBots } = await req.json();
 
     if (!email) {
       return new Response(
@@ -37,42 +37,144 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user information from users_metadata table which references auth.users
-    const { data: usersMetadata, error: metadataError } = await supabase
-      .from("users_metadata")
-      .select("id")
-      .eq("id", email.toLowerCase())
-      .maybeSingle();
-    
-    if (metadataError) {
-      console.error("Error looking up user metadata:", metadataError);
-    }
-    
     // Use getUser to check if the user already exists
     const { data: { user }, error: getUserError } = await supabase.auth.admin.getUserByEmail(email);
     
-    // If user exists, update team_members record with the correct member_id
+    let memberData = null;
+    
+    // If user exists, create or update team_members record with the correct member_id
     if (user) {
-      console.log(`User ${email} already exists with ID ${user.id}, updating team_members record`);
+      console.log(`User ${email} already exists with ID ${user.id}`);
       
-      const { error: updateError } = await supabase
+      // Check if team member already exists
+      const { data: existingMember, error: checkError } = await supabase
         .from("team_members")
-        .update({ member_id: user.id, status: "active" })
-        .eq("email", email.toLowerCase());
+        .select("*")
+        .eq("email", email.toLowerCase())
+        .eq("owner_id", ownerId)
+        .maybeSingle();
         
-      if (updateError) {
-        console.error("Error updating team member:", updateError);
+      if (checkError) {
+        console.error("Error checking existing team member:", checkError);
+      }
+      
+      if (existingMember) {
+        // Update existing member
+        const { data: updatedMember, error: updateError } = await supabase
+          .from("team_members")
+          .update({ 
+            member_id: user.id, 
+            status: "active",
+            role: role || existingMember.role
+          })
+          .eq("id", existingMember.id)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error("Error updating team member:", updateError);
+          throw updateError;
+        } else {
+          console.log(`Successfully updated team member for ${email}`);
+          memberData = updatedMember;
+        }
       } else {
-        console.log(`Successfully updated team member for ${email}`);
+        // Create new team member
+        const { data: newMember, error: insertError } = await supabase
+          .from("team_members")
+          .insert({
+            owner_id: ownerId,
+            email: email.toLowerCase(),
+            member_id: user.id,
+            role: role || "member",
+            status: "active"
+          })
+          .select()
+          .single();
+          
+        if (insertError) {
+          console.error("Error creating team member:", insertError);
+          throw insertError;
+        } else {
+          console.log(`Successfully created team member for ${email}`);
+          memberData = newMember;
+        }
+      }
+      
+      // Handle bot permissions if needed
+      if (selectedBots && selectedBots.length > 0 && memberData) {
+        // First, delete any existing permissions
+        await supabase
+          .from("bot_permissions")
+          .delete()
+          .eq("team_member_id", memberData.id);
+          
+        // Then add the new ones
+        const botPermissions = selectedBots.map(botId => ({
+          team_member_id: memberData.id,
+          bot_id: botId
+        }));
         
-        // Return success without sending invitation email
-        return new Response(
-          JSON.stringify({ message: "User already exists, team member updated" }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          }
-        );
+        const { error: permissionError } = await supabase
+          .from("bot_permissions")
+          .insert(botPermissions);
+          
+        if (permissionError) {
+          console.error("Error adding bot permissions:", permissionError);
+        }
+      }
+        
+      // Return success without sending invitation email
+      return new Response(
+        JSON.stringify({ 
+          message: "User already exists, team member updated/created", 
+          memberData 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
+    }
+
+    // For new users, create a pending team member record before sending the invitation
+    if (ownerId) {
+      // Generate a temporary UUID for the member_id
+      const temporaryId = crypto.randomUUID();
+      
+      const { data: pendingMember, error: memberError } = await supabase
+        .from("team_members")
+        .insert({
+          owner_id: ownerId,
+          email: email.toLowerCase(),
+          member_id: temporaryId, // Using temporary ID to satisfy not-null constraint
+          role: role || "member",
+          status: "pending"
+        })
+        .select()
+        .single();
+        
+      if (memberError) {
+        console.error("Error creating pending team member:", memberError);
+        throw memberError;
+      }
+      
+      memberData = pendingMember;
+      
+      // Add bot permissions if selected
+      if (selectedBots && selectedBots.length > 0 && memberData) {
+        const botPermissions = selectedBots.map(botId => ({
+          team_member_id: memberData.id,
+          bot_id: botId
+        }));
+        
+        const { error: permissionError } = await supabase
+          .from("bot_permissions")
+          .insert(botPermissions);
+          
+        if (permissionError) {
+          console.error("Error adding bot permissions:", permissionError);
+        }
       }
     }
 
@@ -95,7 +197,10 @@ serve(async (req) => {
     console.log("Invitation sent successfully:", data);
 
     return new Response(
-      JSON.stringify({ message: "Invitation sent successfully" }),
+      JSON.stringify({ 
+        message: "Invitation sent successfully",
+        memberData
+      }),
       { 
         status: 200, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
