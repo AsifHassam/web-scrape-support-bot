@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import TeamMembersTable from "@/components/team/TeamMembersTable";
 import AddTeamMemberDialog from "@/components/team/AddTeamMemberDialog";
 import RemoveTeamMemberDialog from "@/components/team/RemoveTeamMemberDialog";
+import WithdrawInvitationDialog from "@/components/team/WithdrawInvitationDialog";
 import { Badge } from "@/components/ui/badge";
 import { SubscriptionTier } from "@/lib/types/billing";
 
@@ -39,8 +40,10 @@ const Team = () => {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>("TRIAL");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [addingMember, setAddingMember] = useState(false);
+  const [withdrawingInvitation, setWithdrawingInvitation] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -337,6 +340,38 @@ const Team = () => {
     setRemoveDialogOpen(true);
   };
 
+  const openWithdrawDialog = (member: TeamMember) => {
+    setSelectedMember(member);
+    setWithdrawDialogOpen(true);
+  };
+
+  const handleWithdrawInvitation = async () => {
+    if (!selectedMember) return;
+    
+    try {
+      setWithdrawingInvitation(true);
+      
+      const { error } = await supabase
+        .from("team_members")
+        .delete()
+        .eq("id", selectedMember.id)
+        .eq("status", "pending");
+        
+      if (error) throw error;
+      
+      setTeamMembers(teamMembers.filter(member => member.id !== selectedMember.id));
+      setWithdrawDialogOpen(false);
+      setSelectedMember(null);
+      
+      toast.success("Invitation withdrawn successfully");
+    } catch (error: any) {
+      console.error("Error withdrawing invitation:", error);
+      toast.error(`Failed to withdraw invitation: ${error.message}`);
+    } finally {
+      setWithdrawingInvitation(false);
+    }
+  };
+
   const fetchTeamMembers = async () => {
     if (!user) return;
     
@@ -447,6 +482,7 @@ const Team = () => {
                 members={teamMembers} 
                 bots={bots}
                 onRemoveMember={openRemoveDialog}
+                onWithdrawInvitation={openWithdrawDialog}
                 onUpdateBots={handleUpdateMemberBots}
               />
             )}
@@ -466,6 +502,14 @@ const Team = () => {
         onOpenChange={setRemoveDialogOpen}
         member={selectedMember}
         onRemove={handleRemoveMember}
+      />
+
+      <WithdrawInvitationDialog
+        open={withdrawDialogOpen}
+        onOpenChange={setWithdrawDialogOpen}
+        member={selectedMember}
+        isLoading={withdrawingInvitation}
+        onWithdraw={handleWithdrawInvitation}
       />
     </div>
   );

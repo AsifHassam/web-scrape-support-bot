@@ -1,5 +1,5 @@
 
-import { Check, Clock, Edit, Shield, Trash2, UserCog, UserPlus } from "lucide-react";
+import { Check, Clock, Edit, Shield, Trash2, UserCog, UserPlus, XCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ interface TeamMembersTableProps {
   members: TeamMember[];
   bots: { id: string; name: string }[];
   onRemoveMember: (member: TeamMember) => void;
+  onWithdrawInvitation: (member: TeamMember) => void;
   onUpdateBots: (memberId: string, selectedBots: string[]) => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ const TeamMembersTable = ({
   members,
   bots,
   onRemoveMember,
+  onWithdrawInvitation,
   onUpdateBots
 }: TeamMembersTableProps) => {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
@@ -48,6 +50,16 @@ const TeamMembersTable = ({
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Sort members to show pending invitations more prominently
+  const sortedMembers = [...members].sort((a, b) => {
+    // Sort by status - pending first, then active, then owner
+    if (a.isOwner && !b.isOwner) return 1;
+    if (!a.isOwner && b.isOwner) return -1;
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+    return 0;
+  });
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -62,8 +74,11 @@ const TeamMembersTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {members.map((member) => (
-            <TableRow key={member.id} className={member.isOwner ? "bg-primary/5" : ""}>
+          {sortedMembers.map((member) => (
+            <TableRow key={member.id} className={
+              member.isOwner ? "bg-primary/5" : 
+              member.status === 'pending' ? "bg-amber-50 dark:bg-amber-900/10" : ""
+            }>
               <TableCell className="font-medium">
                 <div className="flex items-center">
                   {member.email}
@@ -130,21 +145,34 @@ const TeamMembersTable = ({
                 <div className="flex justify-end space-x-2">
                   {!member.isOwner && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateClick(member)}
-                        disabled={updatingBots === member.id}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onRemoveMember(member)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {member.status === 'active' ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateClick(member)}
+                            disabled={updatingBots === member.id}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onRemoveMember(member)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : member.status === 'pending' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onWithdrawInvitation(member)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Withdraw
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
