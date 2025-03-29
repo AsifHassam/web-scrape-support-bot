@@ -105,6 +105,7 @@ const Dashboard = () => {
         
         const liveBotCount = (botsData || []).filter(bot => bot.is_live).length;
         setLiveBotCount(liveBotCount);
+        console.log(`Dashboard - Live bot count: ${liveBotCount}, Max allowed: ${SUBSCRIPTION_LIMITS[getSubscriptionTier()].maxLiveBots}`);
         
         const botsWithCounts = await Promise.all((botsData || []).map(async (bot) => {
           try {

@@ -88,16 +88,18 @@ const EditBot = () => {
       if (!user?.id) return;
       
       try {
+        // Get accurate live bot count from database
         const { data, error } = await supabase
           .from("bots")
-          .select("id, is_live")
-          .eq("user_id", user.id);
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("is_live", true);
           
         if (error) throw error;
         
         // Count only bots that are actually live
-        const liveBots = (data || []).filter(bot => bot.is_live).length;
-        setLiveBotCount(liveBots);
+        setLiveBotCount(data?.length || 0);
+        console.log(`EditBot - Live bot count: ${data?.length || 0}`);
       } catch (error) {
         console.error("Error fetching live bot count:", error);
       }
@@ -244,6 +246,12 @@ const EditBot = () => {
     
     const fetchSubscriptionStatus = async () => {
       try {
+        // Use the user object directly rather than user.id to avoid errors
+        if (!user.id) {
+          console.log("No user ID found");
+          return;
+        }
+        
         const { data, error } = await supabase
           .from("users_metadata")
           .select("payment_status")

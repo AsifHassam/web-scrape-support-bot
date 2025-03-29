@@ -89,7 +89,10 @@ const CreateBot = () => {
           'FREE': 'TRIAL',
           'BASIC': 'STARTER',
           'PREMIUM': 'PRO',
-          'ENTERPRISE': 'ENTERPRISE'
+          'ENTERPRISE': 'ENTERPRISE',
+          'TRIAL': 'TRIAL',
+          'STARTER': 'STARTER',
+          'PRO': 'PRO'
         };
         
         setUserSubscription(tierMap[userData.payment_status] || 'STARTER');
@@ -103,6 +106,7 @@ const CreateBot = () => {
         if (botsError) throw botsError;
         
         setLiveBotCount(botsData.length);
+        console.log(`Live bot count: ${botsData.length}, Max allowed: ${SUBSCRIPTION_LIMITS[tierMap[userData.payment_status] || 'STARTER'].maxLiveBots}`);
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
@@ -203,7 +207,18 @@ const CreateBot = () => {
     if (step === 3) {
       setLoading(true);
       try {
-        if (liveBotCount >= SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots) {
+        const { data: liveBots, error: countError } = await supabase
+          .from("bots")
+          .select("id")
+          .eq("user_id", user?.id)
+          .eq("is_live", true);
+          
+        if (countError) throw countError;
+        
+        const currentLiveCount = liveBots?.length || 0;
+        console.log(`Verified live bot count: ${currentLiveCount}, Max allowed: ${SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots}`);
+        
+        if (currentLiveCount >= SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots) {
           setUpgradeDialogOpen(true);
           setLoading(false);
           return;

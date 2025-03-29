@@ -31,11 +31,47 @@ const BotStatusToggle = ({
 
   // Enforce the live bot limit when the component mounts
   useEffect(() => {
-    if (isLive && liveBotCount > maxLiveBots) {
-      // Force deactivate if somehow the bot is live but exceeds the limit
-      handleToggle(false, {} as React.MouseEvent);
+    if (isLive) {
+      // Check if this bot causes us to exceed the limit
+      const currentLiveBots = isLive ? liveBotCount : liveBotCount + 1;
+      if (currentLiveBots > maxLiveBots) {
+        console.log(`Limit exceeded: ${currentLiveBots} > ${maxLiveBots}, deactivating bot ${botId}`);
+        // Force deactivate if somehow the bot is live but exceeds the limit
+        handleDeactivate();
+      }
     }
   }, []);
+
+  // Separate function for deactivation to use in the initial enforcement
+  const handleDeactivate = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from("bots")
+        .update({ is_live: false })
+        .eq("id", botId);
+
+      if (error) throw error;
+
+      // Only update local state after successful DB update
+      setCurrentStatus(false);
+      onStatusChange(false);
+      
+      toast({
+        title: "Bot is now in draft mode",
+        description: "Your bot is now in draft mode and won't be visible to users.",
+      });
+    } catch (error: any) {
+      console.error("Error updating bot status:", error);
+      toast({
+        title: "Error updating status",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Re-check live bot count when trying to activate a bot
   useEffect(() => {
@@ -60,10 +96,32 @@ const BotStatusToggle = ({
     // Stop event propagation to prevent card click
     e.stopPropagation();
     
-    // If trying to set a bot live and we're at the limit, show upgrade dialog
-    if (checked && liveBotCount >= maxLiveBots && !isLive) {
-      setUpgradeDialogOpen(true);
-      return;
+    // If trying to set a bot live and we're at or above the limit, show upgrade dialog
+    if (checked && !currentStatus) {
+      // Get the latest count of live bots
+      const { data, error } = await supabase
+        .from('bots')
+        .select('id')
+        .eq('is_live', true);
+        
+      if (error) {
+        console.error("Error checking live bots:", error);
+        toast({
+          title: "Error",
+          description: "Could not verify live bot count. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Use the fresh data from database to make the decision
+      const currentLiveCount = data?.length || 0;
+      console.log(`Current live count: ${currentLiveCount}, max: ${maxLiveBots}`);
+      
+      if (currentLiveCount >= maxLiveBots) {
+        setUpgradeDialogOpen(true);
+        return;
+      }
     }
 
     setLoading(true);
