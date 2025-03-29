@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,6 +60,14 @@ const AddTeamMemberDialog = ({
       role: "member",
     },
   });
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+      setSelectedBots([]);
+    }
+  }, [open, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);

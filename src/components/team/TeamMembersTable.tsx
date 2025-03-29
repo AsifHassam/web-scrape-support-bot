@@ -75,10 +75,13 @@ const TeamMembersTable = ({
         </TableHeader>
         <TableBody>
           {sortedMembers.map((member) => (
-            <TableRow key={member.id} className={
-              member.isOwner ? "bg-primary/5" : 
-              member.status === 'pending' ? "bg-amber-50 dark:bg-amber-900/10" : ""
-            }>
+            <TableRow 
+              key={`${member.id}-${member.email}`} 
+              className={
+                member.isOwner ? "bg-primary/5" : 
+                member.status === 'pending' ? "bg-amber-50 dark:bg-amber-900/10" : ""
+              }
+            >
               <TableCell className="font-medium">
                 <div className="flex items-center">
                   {member.email}

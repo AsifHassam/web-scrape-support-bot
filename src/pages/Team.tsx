@@ -195,7 +195,7 @@ const Team = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}` // Use the real access token
+            'Authorization': `Bearer ${session.access_token}`
           },
           body: JSON.stringify({
             email,
@@ -229,22 +229,21 @@ const Team = () => {
             return bot ? { id: bot.id, name: bot.name } : null;
           }).filter(Boolean);
           
-          setTeamMembers([...teamMembers, { 
-            ...responseData.memberData, 
-            bots: memberBots 
-          } as TeamMember]);
+          // Make sure to fetch fresh data rather than just appending to avoid duplicates
+          await fetchTeamMembers();
           
           toast.success(`Invitation sent to ${email}`);
         } else {
           toast.success(responseData.message || `Team member operation completed`);
           
-          fetchTeamMembers();
+          // Refresh the entire team members list to ensure consistency
+          await fetchTeamMembers();
         }
       } catch (jsonError) {
         console.error("Error parsing response as JSON:", jsonError);
         toast.success("Operation completed, but response could not be parsed");
         
-        fetchTeamMembers();
+        await fetchTeamMembers();
       }
       
       setAddDialogOpen(false);
@@ -406,7 +405,13 @@ const Team = () => {
         isOwner: true
       };
       
-      setTeamMembers([ownerMember, ...teamMembersWithBots as TeamMember[]]);
+      // Make sure each member has a unique ID in the array
+      setTeamMembers([
+        ownerMember, 
+        ...teamMembersWithBots.filter((member, index, self) => 
+          index === self.findIndex(m => m.id === member.id)
+        ) as TeamMember[]
+      ]);
     } catch (error: any) {
       console.error("Error fetching team members:", error);
       toast.error(`Failed to load team members: ${error.message}`);
