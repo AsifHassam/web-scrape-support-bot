@@ -28,6 +28,7 @@ const BotStatusToggle = ({
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const { toast } = useToast();
   const maxLiveBots = SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots;
+  const isPremiumUser = userSubscription === 'PRO' || userSubscription === 'ENTERPRISE';
 
   // Enforce the live bot limit when the component mounts
   useEffect(() => {
@@ -117,12 +118,15 @@ const BotStatusToggle = ({
       
       // Use the fresh data from database to make the decision
       const currentLiveCount = data?.length || 0;
-      console.log(`Current live count: ${currentLiveCount}, max: ${maxLiveBots}, subscription: ${userSubscription}`);
+      console.log(`Current live count: ${currentLiveCount}, max: ${maxLiveBots}, subscription: ${userSubscription}, isPremium: ${isPremiumUser}`);
       
-      if (currentLiveCount >= maxLiveBots && userSubscription !== 'PRO' && userSubscription !== 'ENTERPRISE') {
+      // Only show upgrade dialog for non-premium users who have reached their limit
+      if (currentLiveCount >= maxLiveBots && !isPremiumUser) {
         setUpgradeDialogOpen(true);
         return;
       }
+
+      // For premium users or users under their limit, just proceed with the activation
     }
 
     setLoading(true);
