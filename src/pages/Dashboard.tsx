@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import SubscriptionStats from "@/components/SubscriptionStats";
-import { SubscriptionTier } from "@/lib/types/billing";
+import { SubscriptionTier, SUBSCRIPTION_LIMITS } from "@/lib/types/billing";
 
 interface Bot {
   id: string;
