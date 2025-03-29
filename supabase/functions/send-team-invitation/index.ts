@@ -37,6 +37,42 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if user already exists
+    const { data: existingUsers, error: lookupError } = await supabase
+      .from("auth.users")
+      .select("id, email")
+      .eq("email", email.toLowerCase());
+      
+    if (lookupError) {
+      console.error("Error looking up existing user:", lookupError);
+    }
+    
+    // If user exists, update team_members record with the correct member_id
+    if (existingUsers && existingUsers.length > 0) {
+      const userId = existingUsers[0].id;
+      console.log(`User ${email} already exists with ID ${userId}, updating team_members record`);
+      
+      const { error: updateError } = await supabase
+        .from("team_members")
+        .update({ member_id: userId, status: "active" })
+        .eq("email", email.toLowerCase());
+        
+      if (updateError) {
+        console.error("Error updating team member:", updateError);
+      } else {
+        console.log(`Successfully updated team member for ${email}`);
+        
+        // Return success without sending invitation email
+        return new Response(
+          JSON.stringify({ message: "User already exists, team member updated" }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
+    }
+
     // Use the built-in auth.admin.inviteUserByEmail to send an invitation
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: signUpUrl || `${supabaseUrl}/auth/v1/callback`,

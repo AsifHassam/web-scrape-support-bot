@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TeamMemberRole } from "@/pages/Team";
+import { Loader2 } from "lucide-react";
 
 interface AddTeamMemberDialogProps {
   open: boolean;
@@ -50,6 +51,7 @@ const AddTeamMemberDialog = ({
   onAddMember
 }: AddTeamMemberDialogProps) => {
   const [selectedBots, setSelectedBots] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,9 +62,14 @@ const AddTeamMemberDialog = ({
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    await onAddMember(values.email, values.role, selectedBots);
-    form.reset();
-    setSelectedBots([]);
+    setIsSubmitting(true);
+    try {
+      await onAddMember(values.email, values.role, selectedBots);
+      form.reset();
+      setSelectedBots([]);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBotToggle = (botId: string) => {
@@ -154,7 +161,16 @@ const AddTeamMemberDialog = ({
             </div>
             
             <DialogFooter>
-              <Button type="submit">Add Team Member</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Team Member"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

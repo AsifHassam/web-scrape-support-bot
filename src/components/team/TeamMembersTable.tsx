@@ -28,10 +28,20 @@ const TeamMembersTable = ({
 }: TeamMembersTableProps) => {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [updatingBots, setUpdatingBots] = useState<string | null>(null);
 
   const handleUpdateClick = (member: TeamMember) => {
     setSelectedMember(member);
     setUpdateDialogOpen(true);
+  };
+
+  const handleUpdateBots = async (memberId: string, selectedBots: string[]) => {
+    setUpdatingBots(memberId);
+    try {
+      await onUpdateBots(memberId, selectedBots);
+    } finally {
+      setUpdatingBots(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -124,6 +134,7 @@ const TeamMembersTable = ({
                         variant="outline"
                         size="sm"
                         onClick={() => handleUpdateClick(member)}
+                        disabled={updatingBots === member.id}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -149,7 +160,7 @@ const TeamMembersTable = ({
           onOpenChange={setUpdateDialogOpen}
           member={selectedMember}
           bots={bots}
-          onUpdate={(botIds) => onUpdateBots(selectedMember.id, botIds)}
+          onUpdate={(botIds) => handleUpdateBots(selectedMember.id, botIds)}
         />
       )}
     </div>

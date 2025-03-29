@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import TeamMembersTable from "@/components/team/TeamMembersTable";
 import AddTeamMemberDialog from "@/components/team/AddTeamMemberDialog";
 import RemoveTeamMemberDialog from "@/components/team/RemoveTeamMemberDialog";
@@ -40,6 +41,7 @@ const Team = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -157,11 +159,24 @@ const Team = () => {
     if (!user) return;
     
     try {
+      setAddingMember(true);
+      
       const memberLimit = subscriptionTier === "ENTERPRISE" ? 10 : 5;
       if (teamMembers.length >= memberLimit) {
         toast.error(`Your plan allows a maximum of ${memberLimit} team members`);
         return;
       }
+      
+      // First check if the user already exists by email
+      const { data: existingUsers, error: userCheckError } = await supabase
+        .from("auth.users")
+        .select("id")
+        .eq("email", email.toLowerCase());
+      
+      // Extract member_id if the user already exists
+      const member_id = existingUsers && existingUsers.length > 0 
+        ? existingUsers[0].id 
+        : null;
       
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
@@ -169,7 +184,7 @@ const Team = () => {
           owner_id: user.id,
           email: email.toLowerCase(),
           role,
-          member_id: null
+          member_id
         })
         .select()
         .single();
@@ -239,6 +254,8 @@ const Team = () => {
     } catch (error: any) {
       console.error("Error adding team member:", error);
       toast.error(`Failed to add team member: ${error.message}`);
+    } finally {
+      setAddingMember(false);
     }
   };
   
@@ -348,6 +365,7 @@ const Team = () => {
             
             {loading ? (
               <div className="text-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                 <p className="text-gray-500 dark:text-gray-400">Loading team members...</p>
               </div>
             ) : teamMembers.length === 0 ? (
