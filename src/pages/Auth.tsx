@@ -1,427 +1,343 @@
+
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const Auth = () => {
-  const [view, setView] = useState<"signin" | "signup" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [token, setToken] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<"signin" | "signup" | "reset">("signin");
   const [teamInviteId, setTeamInviteId] = useState<string | null>(null);
-  
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
-    // Check for team invitation in URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteParam = urlParams.get('team_invite');
+    // Check if user is already logged in
+    if (user) {
+      navigate("/dashboard");
+    }
+
+    // Check for team invite parameter
+    const params = new URLSearchParams(location.search);
+    const inviteParam = params.get("team_invite");
     if (inviteParam) {
       setTeamInviteId(inviteParam);
-      setView('signup'); // Automatically show signup view for invited users
+      setView("signup");
     }
-    
-    // Redirect if already signed in
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/dashboard");
-      }
-    };
-    checkSession();
-  }, [navigate]);
+  }, [user, navigate, location]);
 
-  const signIn = async (email: string, password: string) => {
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
     try {
-      setSubmitting(true);
-      setError("");
+      // Sign up the user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: name || email.split("@")[0],
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (teamInviteId && authData.user) {
+        // Update the team member with the new user ID
+        const { error: updateError } = await supabase
+          .from("team_members")
+          .update({ 
+            member_id: authData.user.id,
+            status: 'active'
+          })
+          .eq('id', teamInviteId);
+        
+        if (updateError) {
+          console.error("Error updating team member:", updateError);
+          // Continue with signup process even if team linking fails
+        } else {
+          toast.success("Successfully linked to your team invitation");
+        }
+      }
+
+      toast.success("Sign up successful! Please check your email for verification.");
+      setView("signin");
+    } catch (error: any) {
+      console.error("Error signing up:", error);
+      toast.error(error.message || "An error occurred during sign up");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) {
-        throw error;
-      }
+
+      if (error) throw error;
+
+      toast.success("Sign in successful!");
       navigate("/dashboard");
     } catch (error: any) {
-      console.error("Sign in error:", error);
-      setError(error.error_description || error.message || "An error occurred during sign in");
+      console.error("Error signing in:", error);
+      toast.error(error.message || "Invalid email or password");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string) => {
-    try {
-      setSubmitting(true);
-      setError("");
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      // If this is a team invitation, update the team member record with the new user ID
-      if (teamInviteId && data.user) {
-        const { error: teamError } = await supabase
-          .from('team_members')
-          .update({ 
-            member_id: data.user.id,
-            status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', teamInviteId);
-          
-        if (teamError) {
-          console.error("Error updating team member:", teamError);
-          // We don't want to block signup if this fails
-        }
-      }
-      
-      setSuccess(
-        "Success! Please check your email for a confirmation link to complete your registration."
-      );
-    } catch (error: any) {
-      console.error("Sign up error:", error);
-      setError(error.error_description || error.message || "An error occurred during sign up");
-    } finally {
-      setSubmitting(false);
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email");
+      return;
     }
-  };
 
-  const resetPassword = async (email: string) => {
+    setLoading(true);
     try {
-      setSubmitting(true);
-      setError("");
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth?view=update`,
       });
-      if (error) {
-        throw error;
-      }
-      setSuccess("Success! Please check your email for password reset instructions.");
-    } catch (error: any) {
-      console.error("Reset password error:", error);
-      setError(error.error_description || error.message || "An error occurred during password reset");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const updatePassword = async (token: string, newPassword: string) => {
-    try {
-      setSubmitting(true);
-      setError("");
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (error) {
-        throw error;
-      }
-      setSuccess("Success! Your password has been updated.");
-      setView("signin");
+      if (error) throw error;
+
+      toast.success("Password reset email sent! Check your inbox.");
     } catch (error: any) {
-      console.error("Update password error:", error);
-      setError(error.error_description || error.message || "An error occurred while updating password");
+      console.error("Error resetting password:", error);
+      toast.error(error.message || "Failed to send reset email");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-          {teamInviteId 
-            ? "Create your account" 
-            : view === "signin" 
-              ? "Sign in to your account" 
-              : view === "signup" 
-                ? "Create an account" 
-                : "Reset your password"}
-        </h2>
-        {teamInviteId && (
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            You've been invited to join a team
+    <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-primary">
+            {teamInviteId ? "Join Your Team" : "Welcome"}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
+            {teamInviteId 
+              ? "Complete your account creation to access shared bots" 
+              : "Sign in to your account or create a new one"}
           </p>
-        )}
-      </div>
+        </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {success && (
-            <div className="rounded-md bg-green-50 dark:bg-green-900 p-4 mb-4">
-              <div className="text-sm font-medium text-green-800 dark:text-green-400">{success}</div>
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900 p-4 mb-4">
-              <div className="text-sm font-medium text-red-800 dark:text-red-400">{error}</div>
-            </div>
-          )}
-
-          {view === "signin" && (
-            <form className="space-y-6" onSubmit={(e) => {
-              e.preventDefault();
-              signIn(email, password);
-            }}>
-              <div>
-                <Label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email address
-                </Label>
-                <div className="mt-1">
+        <Card>
+          <CardHeader>
+            {!teamInviteId && (
+              <Tabs value={view} onValueChange={(v) => setView(v as "signin" | "signup" | "reset")}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="signin">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  <TabsTrigger value="reset">Reset</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            
+            <CardTitle className="mt-4">
+              {view === "signin" && "Sign In"}
+              {view === "signup" && (teamInviteId ? "Create Your Account" : "Sign Up")}
+              {view === "reset" && "Reset Password"}
+            </CardTitle>
+            
+            <CardDescription>
+              {view === "signin" && "Enter your credentials to access your account"}
+              {view === "signup" && "Create a new account to get started"}
+              {view === "reset" && "Enter your email to receive a password reset link"}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {view === "signin" && (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    name="email"
                     type="email"
-                    autoComplete="email"
-                    required
+                    placeholder="your.email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                    required
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Password
-                </Label>
-                <div className="mt-1">
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto text-xs"
+                      onClick={() => setView("reset")}
+                      type="button"
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
                   <Input
                     id="password"
-                    name="password"
                     type="password"
-                    autoComplete="current-password"
-                    required
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                    required
                   />
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <Link to="#" onClick={() => setView("reset")} className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
-                    Forgot your password?
-                  </Link>
-                </div>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  disabled={submitting}
-                >
-                  {submitting ? "Signing in..." : "Sign in"}
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
                 </Button>
-              </div>
-            </form>
-          )}
-
-          {view === "signup" && (
-            <form className="space-y-6" onSubmit={(e) => {
-              e.preventDefault();
-              if (password !== confirmPassword) {
-                setError("Passwords do not match");
-                return;
-              }
-              signUp(email, password);
-            }}>
-              <div>
-                <Label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email address
-                </Label>
-                <div className="mt-1">
+              </form>
+            )}
+            
+            {view === "signup" && (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    name="email"
                     type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
+                    placeholder="your.email@example.com"
+                    value={teamInviteId ? email : email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                    required
+                    disabled={!!teamInviteId}
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Password
-                </Label>
-                <div className="mt-1">
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
-                    name="password"
                     type="password"
-                    autoComplete="new-password"
-                    required
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                    required
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Confirm Password
-                </Label>
-                <div className="mt-1">
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
-                    id="confirm-password"
-                    name="confirm-password"
+                    id="confirmPassword"
                     type="password"
-                    autoComplete="new-password"
-                    required
+                    placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                    required
                   />
                 </div>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  disabled={submitting}
-                >
-                  {submitting ? "Creating account..." : "Create account"}
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
-              </div>
-            </form>
-          )}
-
-          {view === "reset" && (
-            <form className="space-y-6" onSubmit={(e) => {
-              e.preventDefault();
-              resetPassword(email);
-            }}>
-              <div>
-                <Label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email address
-                </Label>
-                <div className="mt-1">
+              </form>
+            )}
+            
+            {view === "reset" && (
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    name="email"
                     type="email"
-                    autoComplete="email"
-                    required
+                    placeholder="your.email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  disabled={submitting}
-                >
-                  {submitting ? "Sending reset instructions..." : "Reset password"}
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {view === "update" && (
-            <form className="space-y-6" onSubmit={(e) => {
-              e.preventDefault();
-              updatePassword(token, newPassword);
-            }}>
-              <div>
-                <Label htmlFor="token" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Token
-                </Label>
-                <div className="mt-1">
-                  <Input
-                    id="token"
-                    name="token"
-                    type="text"
                     required
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  New Password
-                </Label>
-                <div className="mt-1">
-                  <Input
-                    id="new-password"
-                    name="new-password"
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  disabled={submitting}
-                >
-                  {submitting ? "Updating password..." : "Update password"}
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending reset link...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
                 </Button>
-              </div>
-            </form>
-          )}
+              </form>
+            )}
+          </CardContent>
           
-          {!teamInviteId && !success && (
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                    {view === "signin" ? "New to our platform?" : "Already have an account?"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 cursor-pointer"
+          <CardFooter>
+            {view !== "reset" && !teamInviteId && (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 w-full">
+                {view === "signin" ? "Don't have an account? " : "Already have an account? "}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto" 
                   onClick={() => setView(view === "signin" ? "signup" : "signin")}
                 >
-                  {view === "signin" ? "Create a new account" : "Sign in instead"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+                  {view === "signin" ? "Sign up" : "Sign in"}
+                </Button>
+              </p>
+            )}
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

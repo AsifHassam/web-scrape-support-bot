@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { SubscriptionTier } from "@/lib/types/billing";
+import { Link } from "react-router-dom";
 
 // Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import TeamMembersTable from "@/components/team/TeamMembersTable";
 import InviteUserDialog from "@/components/team/InviteUserDialog";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TeamMember {
   id: string;
@@ -72,42 +73,43 @@ const Team = () => {
   const fetchTeamMembers = async () => {
     setLoading(true);
     try {
-      // Get team members where current user is the owner
+      if (!user) return;
+      
+      // Get team members from the database
       const { data: members, error } = await supabase
         .from('team_members')
-        .select(`
-          id, 
-          email, 
-          status, 
-          role, 
-          created_at, 
-          updated_at,
-          bot_permissions (
-            bot_id
-          )
-        `)
-        .eq('owner_id', user?.id);
+        .select('*')
+        .eq('owner_id', user.id);
 
       if (error) throw error;
-
-      // Fetch bot details for each permission
-      const membersWithBots = await Promise.all(members.map(async (member) => {
-        const botIds = member.bot_permissions.map((p: any) => p.bot_id);
+      
+      // Fetch bot permissions for each member
+      const membersWithBots = await Promise.all((members || []).map(async (member) => {
+        const { data: permissions, error: permError } = await supabase
+          .from('bot_permissions')
+          .select('bot_id')
+          .eq('team_member_id', member.id);
+          
+        if (permError) throw permError;
         
-        if (botIds.length === 0) {
-          return { ...member, bots: [] };
+        const botIds = (permissions || []).map(p => p.bot_id);
+        
+        // Fetch bot details
+        let botData: any[] = [];
+        if (botIds.length > 0) {
+          const { data: bots, error: botsError } = await supabase
+            .from('bots')
+            .select('id, name')
+            .in('id', botIds);
+            
+          if (botsError) throw botsError;
+          botData = bots || [];
         }
         
-        const { data: botData, error: botError } = await supabase
-          .from('bots')
-          .select('id, name')
-          .in('id', botIds);
-          
-        if (botError) throw botError;
-        
+        // Return member with their bots
         return {
           ...member,
-          bots: botData || []
+          bots: botData
         };
       }));
 
@@ -137,11 +139,13 @@ const Team = () => {
 
   const handleInviteUser = async (data: { email: string; role: 'member' | 'admin'; botIds: string[] }) => {
     try {
+      if (!user) return;
+      
       // Create a new team member entry
       const { data: teamMember, error: teamMemberError } = await supabase
         .from('team_members')
         .insert({
-          owner_id: user?.id,
+          owner_id: user.id,
           email: data.email,
           role: data.role,
           // Initially we don't have a member_id since the user hasn't signed up yet
@@ -171,7 +175,7 @@ const Team = () => {
       const { error: inviteError } = await supabase.functions.invoke('send-team-invite', {
         body: {
           email: data.email,
-          inviterId: user?.id,
+          inviterId: user.id,
           teamMemberId: teamMember.id
         }
       });
@@ -260,10 +264,12 @@ const Team = () => {
 
   const handleResendInvite = async (memberId: string, email: string) => {
     try {
+      if (!user) return;
+      
       const { error } = await supabase.functions.invoke('send-team-invite', {
         body: {
           email: email,
-          inviterId: user?.id,
+          inviterId: user.id,
           teamMemberId: memberId
         }
       });
@@ -287,6 +293,11 @@ const Team = () => {
             <p className="mt-3 text-xl text-gray-500 dark:text-gray-400">
               Upgrade to a PRO or ENTERPRISE plan to access team management features.
             </p>
+            <div className="mt-6">
+              <Button asChild>
+                <Link to="/pricing">View Pricing</Link>
+              </Button>
+            </div>
           </div>
         </main>
       </div>

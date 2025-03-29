@@ -63,6 +63,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get team member to update email
+    const { data: memberData, error: memberError } = await supabase
+      .from("team_members")
+      .select("*")
+      .eq("id", teamMemberId)
+      .single();
+
+    if (memberError) {
+      console.error("Error fetching team member data:", memberError);
+      return new Response(
+        JSON.stringify({ error: "Could not fetch team member data" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Update the email in team_members table
+    const { error: updateError } = await supabase
+      .from("team_members")
+      .update({ email: email })
+      .eq("id", teamMemberId);
+
+    if (updateError) {
+      console.error("Error updating team member email:", updateError);
+      // Continue with sending the invitation, as this might be a resend
+    }
+
     const inviterName = inviterData.display_name || "A team admin";
 
     // Generate a signup URL with team member ID

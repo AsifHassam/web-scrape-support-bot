@@ -1,8 +1,6 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,144 +19,169 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserPlus } from "lucide-react";
-
-const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  role: z.enum(["member", "admin"], {
-    required_error: "Please select a role",
-  }),
-  botIds: z.array(z.string()).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Loader2, Plus, UserPlus } from "lucide-react";
+import { z } from "zod";
 
 interface InviteUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvite: (data: FormValues) => Promise<void>;
+  onInvite: (data: { email: string; role: 'member' | 'admin'; botIds: string[] }) => void;
   bots: { id: string; name: string }[];
 }
 
-const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
-  open,
-  onOpenChange,
-  onInvite,
-  bots
-}) => {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      role: "member",
-      botIds: [],
-    },
-  });
+const emailSchema = z.string().email("Please enter a valid email address");
 
-  const handleSubmit = async (data: FormValues) => {
-    await onInvite(data);
-    form.reset();
+const InviteUserDialog = ({ open, onOpenChange, onInvite, bots }: InviteUserDialogProps) => {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<'member' | 'admin'>('member');
+  const [selectedBots, setSelectedBots] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const handleInvite = async () => {
+    try {
+      // Validate email
+      emailSchema.parse(email);
+      setEmailError("");
+      
+      setLoading(true);
+      
+      await onInvite({
+        email,
+        role,
+        botIds: selectedBots
+      });
+      
+      // Reset form
+      setEmail("");
+      setRole('member');
+      setSelectedBots([]);
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setEmailError(error.errors[0].message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleBot = (botId: string) => {
+    setSelectedBots(prev => 
+      prev.includes(botId) 
+        ? prev.filter(id => id !== botId) 
+        : [...prev, botId]
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Invite Team Member
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
-          <DialogDescription>
-            Invite a new user to join your team and give them access to specific bots.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="user@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div>
+      <Button onClick={() => onOpenChange(true)}>
+        <UserPlus className="h-4 w-4 mr-2" />
+        Invite Team Member
+      </Button>
+      
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Send an invitation to collaborate on your bots
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <FormLabel>Bot Access</FormLabel>
-              {bots.length === 0 ? (
-                <p className="text-sm text-gray-500">No bots available</p>
-              ) : (
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {bots.map((bot) => (
-                    <FormField
-                      key={bot.id}
-                      control={form.control}
-                      name="botIds"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(bot.id)}
-                              onCheckedChange={(checked) => {
-                                const currentValue = field.value || [];
-                                if (checked) {
-                                  field.onChange([...currentValue, bot.id]);
-                                } else {
-                                  field.onChange(
-                                    currentValue.filter((value) => value !== bot.id)
-                                  );
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal cursor-pointer">
-                            {bot.name}
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="colleague@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError("");
+                }}
+              />
+              {emailError && (
+                <p className="text-sm text-red-500">{emailError}</p>
               )}
             </div>
-            <DialogFooter>
-              <Button type="submit">Send Invitation</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={role}
+                onValueChange={(value: 'member' | 'admin') => setRole(value)}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Members can only view and manage assigned bots. Admins can manage team members and all bots.
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <Label>Bot Access</Label>
+              
+              {bots.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                  {bots.map((bot) => (
+                    <div key={bot.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`bot-${bot.id}`}
+                        checked={selectedBots.includes(bot.id)}
+                        onCheckedChange={() => toggleBot(bot.id)}
+                      />
+                      <Label htmlFor={`bot-${bot.id}`} className="font-normal cursor-pointer">
+                        {bot.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  You don't have any bots yet. Create bots first to share them with team members.
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleInvite}
+              disabled={loading || !email || selectedBots.length === 0}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

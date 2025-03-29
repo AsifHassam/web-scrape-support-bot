@@ -1,41 +1,18 @@
 
-import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
-const formSchema = z.object({
-  role: z.enum(["member", "admin"], {
-    required_error: "Please select a role",
-  }),
-  botIds: z.array(z.string()).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Loader2 } from "lucide-react";
 
 interface Member {
   id: string;
@@ -53,121 +30,114 @@ interface Member {
 interface EditMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  member: Member | null;
+  member: Member;
   bots: { id: string; name: string }[];
-  onSave: (data: { role: 'member' | 'admin'; botIds: string[] }) => void;
+  onUpdate: (updates: { role?: 'member' | 'admin', botIds?: string[] }) => void;
 }
 
-const EditMemberDialog: React.FC<EditMemberDialogProps> = ({
+const EditMemberDialog = ({
   open,
   onOpenChange,
   member,
   bots,
-  onSave,
-}) => {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      role: "member",
-      botIds: [],
-    },
-  });
+  onUpdate,
+}: EditMemberDialogProps) => {
+  const [role, setRole] = useState<'member' | 'admin'>(member.role);
+  const [selectedBots, setSelectedBots] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Reset form when member changes
   useEffect(() => {
-    if (member) {
-      form.reset({
-        role: member.role,
-        botIds: member.bots.map(bot => bot.id),
-      });
-    }
-  }, [member, form]);
+    // Initialize selected bots when member changes
+    setRole(member.role);
+    setSelectedBots(member.bots.map((bot) => bot.id));
+  }, [member]);
 
-  const handleSubmit = (data: FormValues) => {
-    onSave({
-      role: data.role,
-      botIds: data.botIds || [],
-    });
-    form.reset();
+  const toggleBot = (botId: string) => {
+    setSelectedBots((prev) =>
+      prev.includes(botId) ? prev.filter((id) => id !== botId) : [...prev, botId]
+    );
+  };
+
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      await onUpdate({
+        role,
+        botIds: selectedBots,
+      });
+      onOpenChange(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Team Member</DialogTitle>
+          <DialogDescription>
+            Update role and bot access for {member.email}
+          </DialogDescription>
         </DialogHeader>
-        {member && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <div className="text-sm">
-                <span className="font-semibold">Email:</span> {member.email}
-              </div>
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="space-y-2">
-                <FormLabel>Bot Access</FormLabel>
-                {bots.length === 0 ? (
-                  <p className="text-sm text-gray-500">No bots available</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                    {bots.map((bot) => (
-                      <FormField
-                        key={bot.id}
-                        control={form.control}
-                        name="botIds"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(bot.id)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentValue, bot.id]);
-                                  } else {
-                                    field.onChange(
-                                      currentValue.filter((value) => value !== bot.id)
-                                    );
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal cursor-pointer">
-                              {bot.name}
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="submit">Save Changes</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={role} onValueChange={(value: 'member' | 'admin') => setRole(value)}>
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              Members can only view and manage assigned bots. Admins can manage team members and all bots.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bot Access</Label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
+              {bots.map((bot) => (
+                <div key={bot.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`bot-${bot.id}`}
+                    checked={selectedBots.includes(bot.id)}
+                    onCheckedChange={() => toggleBot(bot.id)}
+                  />
+                  <Label htmlFor={`bot-${bot.id}`} className="font-normal cursor-pointer">
+                    {bot.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {bots.length === 0 && (
+              <p className="text-sm text-gray-500">No bots available to assign</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdate}
+            disabled={loading || selectedBots.length === 0}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
