@@ -9,19 +9,19 @@ import SubscriptionUpgradeDialog from "@/components/billing/SubscriptionUpgradeD
 interface BotStatusToggleProps {
   botId: string;
   isLive: boolean;
+  userSubscription: SubscriptionTier;
+  liveBotCount: number;
   onStatusChange: (isLive: boolean) => void;
   className?: string;
-  userSubscription?: SubscriptionTier;
-  liveBotCount?: number;
 }
 
 const BotStatusToggle = ({
   botId,
   isLive,
+  userSubscription,
+  liveBotCount,
   onStatusChange,
   className = "",
-  userSubscription = 'STARTER',
-  liveBotCount = 0,
 }: BotStatusToggleProps) => {
   const [loading, setLoading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(isLive);
