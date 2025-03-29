@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -177,14 +178,24 @@ const Team = () => {
 
       const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
       
+      // Get the Supabase URL from environment or use a fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://qbhevelbszcvxkutfmlg.supabase.co";
+      
+      // Get the current session for the authorization token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("User is not authenticated");
+      }
+      
+      // Make the request with proper authorization
       const response = await fetch(
         `${supabaseUrl}/functions/v1/send-team-invitation`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${session.access_token}` // Use the real access token
           },
           body: JSON.stringify({
             email,
