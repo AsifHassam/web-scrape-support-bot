@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster as SonnerToaster } from "sonner";
@@ -11,6 +12,7 @@ import Conversations from "@/pages/Conversations";
 import ScrapedSite from "@/pages/ScrapedSite";
 import Auth from "@/pages/Auth";
 import Profile from "@/pages/Profile";
+import Team from "@/pages/Team";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import Index from "@/pages/Index";
@@ -64,6 +66,15 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Conversations />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/team"
+              element={
+                <ProtectedRoute>
+                  <Team />
                 </ProtectedRoute>
               }
             />
