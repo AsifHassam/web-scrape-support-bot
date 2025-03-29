@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Plus, MoreHorizontal, FileEdit, Trash2, MessageSquare, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BotStatusToggle from "@/components/BotStatusToggle";
+import { SubscriptionTier } from "@/lib/types/billing";
 
 interface Bot {
   id: string;
@@ -30,6 +30,8 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [isTeamAdmin, setIsTeamAdmin] = useState(false);
+  const [userSubscription, setUserSubscription] = useState<SubscriptionTier>("STARTER");
+  const [liveBotCount, setLiveBotCount] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -49,7 +51,9 @@ const Dashboard = () => {
 
       if (userError) throw userError;
 
-      const premiumUser = userData?.payment_status === 'PRO' || userData?.payment_status === 'ENTERPRISE';
+      const subscriptionTier = userData?.payment_status as SubscriptionTier || "STARTER";
+      setUserSubscription(subscriptionTier);
+      const premiumUser = subscriptionTier === 'PRO' || subscriptionTier === 'ENTERPRISE';
       setIsPremiumUser(premiumUser);
       
       if (premiumUser) {
@@ -76,7 +80,13 @@ const Dashboard = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setBots(data || []);
+      
+      if (data) {
+        setBots(data);
+        // Count live bots
+        const liveBots = data.filter(bot => bot.is_live).length;
+        setLiveBotCount(liveBots);
+      }
     } catch (error: any) {
       console.error("Error fetching bots:", error);
       toast.error("Failed to load bots");
@@ -166,11 +176,18 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      setBots((prevBots) =>
-        prevBots.map((bot) =>
+      // Update local state for bots and update live bot count
+      setBots((prevBots) => {
+        const updatedBots = prevBots.map((bot) =>
           bot.id === botId ? { ...bot, is_live: isLive } : bot
-        )
-      );
+        );
+        
+        // Update live bot count
+        const newLiveBotCount = updatedBots.filter(bot => bot.is_live).length;
+        setLiveBotCount(newLiveBotCount);
+        
+        return updatedBots;
+      });
 
       toast.success(`Bot ${isLive ? "activated" : "deactivated"} successfully`);
     } catch (error: any) {
@@ -266,8 +283,10 @@ const Dashboard = () => {
                   </Button>
                   <BotStatusToggle 
                     isLive={bot.is_live} 
-                    onChange={(isLive) => handleToggleLiveStatus(bot.id, isLive)}
+                    onStatusChange={(isLive) => handleToggleLiveStatus(bot.id, isLive)}
                     botId={bot.id}
+                    userSubscription={userSubscription}
+                    liveBotCount={liveBotCount}
                   />
                 </CardFooter>
               </Card>

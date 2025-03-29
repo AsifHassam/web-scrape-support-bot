@@ -106,11 +106,13 @@ const Team = () => {
           botData = bots || [];
         }
         
-        // Return member with their bots
+        // Return member with their bots, ensuring correct type for status
         return {
           ...member,
+          status: (member.status as 'pending' | 'active' | 'removed'),
+          role: (member.role as 'member' | 'admin'),
           bots: botData
-        };
+        } as TeamMember;
       }));
 
       setTeamMembers(membersWithBots);

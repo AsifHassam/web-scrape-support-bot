@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +21,7 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({
     avatar_url: null,
     display_name: null,
@@ -82,6 +83,11 @@ const Navbar = () => {
 
   const isPremiumUser = subscriptionTier === 'PRO' || subscriptionTier === 'ENTERPRISE';
 
+  // Toggle theme function that correctly handles the Theme type
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
+
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,7 +139,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setTheme((theme) => (theme === "light" ? "dark" : "light"))}
+              onClick={toggleTheme}
             >
               <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

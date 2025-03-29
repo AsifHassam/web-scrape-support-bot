@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import EditMemberDialog from "@/components/team/EditMemberDialog";
 import DeleteMemberDialog from "@/components/team/DeleteMemberDialog";
-import { Mail, MoreHorizontal, Pencil, Repeat, Trash2, UserCheck, UserClock, UserX } from "lucide-react";
+import { Mail, MoreHorizontal, Pencil, Repeat, Trash2, UserCheck, Clock, UserX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +61,7 @@ const TeamMembersTable = ({
       case 'active':
         return <UserCheck className="h-4 w-4 text-green-500" />;
       case 'pending':
-        return <UserClock className="h-4 w-4 text-yellow-500" />;
+        return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'removed':
         return <UserX className="h-4 w-4 text-red-500" />;
       default:
