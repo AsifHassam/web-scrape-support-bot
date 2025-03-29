@@ -24,33 +24,10 @@ const Auth = () => {
   const [emailExistsMessage, setEmailExistsMessage] = useState<string | null>(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [autoLoginAfterSignup, setAutoLoginAfterSignup] = useState(false);
-  // Rate limiting states
-  const [cooldownActive, setCooldownActive] = useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Cooldown timer effect
-  useEffect(() => {
-    let interval: number | undefined;
-    
-    if (cooldownActive && cooldownSeconds > 0) {
-      interval = window.setInterval(() => {
-        setCooldownSeconds((prev) => {
-          if (prev <= 1) {
-            setCooldownActive(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [cooldownActive, cooldownSeconds]);
 
   useEffect(() => {
     if (user) {
@@ -160,14 +137,6 @@ const Auth = () => {
       if (error?.message?.includes("User already registered")) {
         exists = true;
         setEmailExistsMessage("This email is already registered. Would you like to sign in or reset your password?");
-      } else if (error?.message?.includes("For security purposes, you can only request this")) {
-        // Handle rate limiting error
-        const secondsMatch = error.message.match(/after (\d+) seconds/);
-        const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-        
-        setCooldownSeconds(waitSeconds);
-        setCooldownActive(true);
-        toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
       } else {
         // If no error about existing user, then email is new
         setEmailExistsMessage(null);
@@ -185,11 +154,6 @@ const Auth = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownSeconds} seconds before trying again.`);
-      return;
-    }
-    
     if (!validateForm()) return;
     
     setLoading(true);
@@ -201,7 +165,7 @@ const Auth = () => {
         });
         
         if (error) {
-          handleRateLimitingError(error);
+          toast.error(error.message);
           throw error;
         }
         
@@ -215,7 +179,7 @@ const Auth = () => {
           } else if (error.message?.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
           } else {
-            handleRateLimitingError(error);
+            toast.error(error.message || "Authentication error");
           }
           throw error;
         }
@@ -231,19 +195,13 @@ const Auth = () => {
           return;
         }
         
-        if (cooldownActive) {
-          // Don't proceed if we're in cooldown
-          setLoading(false);
-          return;
-        }
-        
         const { error, data } = await signUp(email, password);
         if (error) {
           if (error.message?.includes("User already registered")) {
             toast.error("This email is already registered");
             setEmailExistsMessage("This email is already registered. Would you like to sign in or reset your password?");
           } else {
-            handleRateLimitingError(error);
+            toast.error(error.message || "Registration error");
           }
           throw error;
         }
@@ -263,20 +221,6 @@ const Auth = () => {
     }
   };
 
-  const handleRateLimitingError = (error: any) => {
-    // Handle rate limiting error
-    if (error.message?.includes("For security purposes, you can only request this")) {
-      const secondsMatch = error.message.match(/after (\d+) seconds/);
-      const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-      
-      setCooldownSeconds(waitSeconds);
-      setCooldownActive(true);
-      toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
-    } else {
-      toast.error(error.message || "Authentication error");
-    }
-  };
-
   const handleBackToLogin = () => {
     setIsForgotPassword(false);
     setResetPasswordSuccess(false);
@@ -285,10 +229,6 @@ const Auth = () => {
 
   const handleBlurEmail = async () => {
     // Only check email existence on sign up form and when we have a valid email
-    if (cooldownActive) {
-      return; // Don't check if we're in cooldown
-    }
-    
     if (!isLogin && email && email.match(/\S+@\S+\.\S+/)) {
       await checkEmailExists(email);
     } else {
@@ -297,11 +237,6 @@ const Auth = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownSeconds} seconds before trying again.`);
-      return;
-    }
-    
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -312,17 +247,7 @@ const Auth = () => {
       });
       
       if (error) {
-        if (error.message.includes("For security purposes, you can only request this")) {
-          // Handle rate limiting error
-          const secondsMatch = error.message.match(/after (\d+) seconds/);
-          const waitSeconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 60;
-          
-          setCooldownSeconds(waitSeconds);
-          setCooldownActive(true);
-          toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
-        } else {
-          toast.error(error.message);
-        }
+        toast.error(error.message);
         throw error;
       }
     } catch (error: any) {
@@ -359,15 +284,6 @@ const Auth = () => {
       </div>
       
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 space-y-6 mt-20">
-        {cooldownActive && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg text-yellow-800 dark:text-yellow-300 mb-4">
-            <p className="font-semibold">Rate limit reached</p>
-            <p className="text-sm mt-1">
-              For security purposes, please wait {cooldownSeconds} seconds before trying again.
-            </p>
-          </div>
-        )}
-        
         {isForgotPassword ? (
           <>
             <div className="text-center">
@@ -414,9 +330,9 @@ const Auth = () => {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={loading || cooldownActive}
+                  disabled={loading}
                 >
-                  {loading ? "Sending..." : cooldownActive ? `Wait ${cooldownSeconds}s` : "Send Reset Link"}
+                  {loading ? "Sending..." : "Send Reset Link"}
                 </Button>
                 
                 <Button 
@@ -520,12 +436,10 @@ const Auth = () => {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={loading || isCheckingEmail || !!emailExistsMessage || cooldownActive}
+                disabled={loading || isCheckingEmail || !!emailExistsMessage}
               >
                 {loading
                   ? "Processing..."
-                  : cooldownActive
-                  ? `Wait ${cooldownSeconds}s`
                   : isLogin
                   ? "Sign In"
                   : "Sign Up"}
@@ -547,7 +461,7 @@ const Auth = () => {
                 variant="outline"
                 className="w-full flex items-center justify-center gap-2"
                 onClick={handleGoogleSignIn}
-                disabled={loading || cooldownActive}
+                disabled={loading}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
