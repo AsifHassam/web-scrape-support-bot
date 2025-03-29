@@ -37,24 +37,27 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user already exists
-    const { data: existingUsers, error: lookupError } = await supabase
-      .from("auth.users")
-      .select("id, email")
-      .eq("email", email.toLowerCase());
-      
-    if (lookupError) {
-      console.error("Error looking up existing user:", lookupError);
+    // Get user information from users_metadata table which references auth.users
+    const { data: usersMetadata, error: metadataError } = await supabase
+      .from("users_metadata")
+      .select("id")
+      .eq("id", email.toLowerCase())
+      .maybeSingle();
+    
+    if (metadataError) {
+      console.error("Error looking up user metadata:", metadataError);
     }
     
+    // Use getUser to check if the user already exists
+    const { data: { user }, error: getUserError } = await supabase.auth.admin.getUserByEmail(email);
+    
     // If user exists, update team_members record with the correct member_id
-    if (existingUsers && existingUsers.length > 0) {
-      const userId = existingUsers[0].id;
-      console.log(`User ${email} already exists with ID ${userId}, updating team_members record`);
+    if (user) {
+      console.log(`User ${email} already exists with ID ${user.id}, updating team_members record`);
       
       const { error: updateError } = await supabase
         .from("team_members")
-        .update({ member_id: userId, status: "active" })
+        .update({ member_id: user.id, status: "active" })
         .eq("email", email.toLowerCase());
         
       if (updateError) {

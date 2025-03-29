@@ -121,7 +121,7 @@ const Team = () => {
           if (permissionsError) throw permissionsError;
           
           const memberBots = (permissions || []).map(p => {
-            const bot = botsData.find(b => b.id === p.bot_id);
+            const bot = botsData?.find(b => b.id === p.bot_id);
             return bot ? { id: bot.id, name: bot.name } : null;
           }).filter(Boolean);
           
@@ -167,16 +167,18 @@ const Team = () => {
         return;
       }
       
-      // First check if the user already exists by email
-      const { data: existingUsers, error: userCheckError } = await supabase
-        .from("auth.users")
+      // First check if the user already exists in the users_metadata table
+      const { data: existingUsersMeta, error: userMetaError } = await supabase
+        .from("users_metadata")
         .select("id")
-        .eq("email", email.toLowerCase());
+        .eq("id", user.id);
+        
+      if (userMetaError) {
+        console.error("Error checking users_metadata:", userMetaError);
+      }
       
       // Extract member_id if the user already exists
-      const member_id = existingUsers && existingUsers.length > 0 
-        ? existingUsers[0].id 
-        : null;
+      const member_id = null; // We'll set this to null initially and handle it in the edge function
       
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
