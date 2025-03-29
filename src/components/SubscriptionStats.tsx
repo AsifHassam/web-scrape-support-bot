@@ -40,6 +40,8 @@ const SubscriptionStats = ({
     return num.toString();
   };
 
+  const showUpgradeButton = tier !== 'PRO' && tier !== 'ENTERPRISE';
+
   return (
     <div className="space-y-4">
       <Card>
@@ -100,7 +102,7 @@ const SubscriptionStats = ({
         </CardContent>
       </Card>
       
-      {tier !== 'ENTERPRISE' && (
+      {showUpgradeButton && (
         <Button 
           className="w-full flex items-center justify-center gap-2" 
           variant="default"

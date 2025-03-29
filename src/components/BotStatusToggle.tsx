@@ -97,6 +97,7 @@ const BotStatusToggle = ({
     e.stopPropagation();
     
     // If trying to set a bot live and we're at or above the limit, show upgrade dialog
+    // But only for non-PRO/ENTERPRISE users
     if (checked && !currentStatus) {
       // Get the latest count of live bots
       const { data, error } = await supabase
@@ -116,9 +117,9 @@ const BotStatusToggle = ({
       
       // Use the fresh data from database to make the decision
       const currentLiveCount = data?.length || 0;
-      console.log(`Current live count: ${currentLiveCount}, max: ${maxLiveBots}`);
+      console.log(`Current live count: ${currentLiveCount}, max: ${maxLiveBots}, subscription: ${userSubscription}`);
       
-      if (currentLiveCount >= maxLiveBots) {
+      if (currentLiveCount >= maxLiveBots && userSubscription !== 'PRO' && userSubscription !== 'ENTERPRISE') {
         setUpgradeDialogOpen(true);
         return;
       }
