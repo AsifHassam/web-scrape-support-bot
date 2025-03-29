@@ -177,8 +177,9 @@ const Team = () => {
 
       const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
       
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://qbhevelbszcvxkutfmlg.supabase.co";
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-team-invitation`,
+        `${supabaseUrl}/functions/v1/send-team-invitation`,
         {
           method: 'POST',
           headers: {
@@ -226,35 +227,7 @@ const Team = () => {
         } else {
           toast.success(responseData.message || `Team member operation completed`);
           
-          const { data: refreshedMembers, error: refreshError } = await supabase
-            .from("team_members")
-            .select("*")
-            .eq("owner_id", user.id);
-            
-          if (!refreshError && refreshedMembers) {
-            const updatedTeamMembers = await Promise.all(refreshedMembers.map(async (member) => {
-              const { data: permissions } = await supabase
-                .from("bot_permissions")
-                .select("bot_id")
-                .eq("team_member_id", member.id);
-                
-              const memberBots = (permissions || []).map(p => {
-                const bot = bots.find(b => b.id === p.bot_id);
-                return bot ? { id: bot.id, name: bot.name } : null;
-              }).filter(Boolean);
-              
-              return {
-                ...member,
-                bots: memberBots
-              };
-            }));
-            
-            const ownerMember = teamMembers.find(m => m.isOwner);
-            setTeamMembers([
-              ...(ownerMember ? [ownerMember] : []), 
-              ...updatedTeamMembers as TeamMember[]
-            ]);
-          }
+          fetchTeamMembers();
         }
       } catch (jsonError) {
         console.error("Error parsing response as JSON:", jsonError);
