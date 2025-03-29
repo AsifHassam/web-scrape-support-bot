@@ -23,7 +23,6 @@ const Auth = () => {
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [emailExistsMessage, setEmailExistsMessage] = useState<string | null>(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [autoLoginAfterSignup, setAutoLoginAfterSignup] = useState(false);
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -72,30 +71,7 @@ const Auth = () => {
     };
     
     handleAuthCallback();
-    
-    // Check if we need to auto login after signup
-    if (autoLoginAfterSignup && email && password) {
-      handleAutoLogin();
-      setAutoLoginAfterSignup(false);
-    }
-  }, [user, navigate, location, autoLoginAfterSignup, email, password]);
-
-  const handleAutoLogin = async () => {
-    try {
-      setLoading(true);
-      const { error } = await signIn(email, password);
-      if (error) {
-        return;
-      }
-      
-      toast.success("Successfully logged in!");
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Auto login error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, navigate, location]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -118,27 +94,25 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Improved method to check if an email exists in Supabase auth
   const checkEmailExists = async (email: string) => {
     try {
       setIsCheckingEmail(true);
       
-      // Use direct signup check but with a random password
-      // This is more reliable than other methods
-      const randomPassword = Math.random().toString(36).slice(-10);
-      const { error } = await supabase.auth.signUp({
+      // More reliable way to check if an email exists
+      const { data, error } = await supabase.auth.signInWithOtp({
         email,
-        password: randomPassword,
-        options: { emailRedirectTo: `${SITE_URL}/auth` }
+        options: {
+          shouldCreateUser: false // This will fail if the user doesn't exist
+        }
       });
       
-      let exists = false;
+      // If there's no error about the user not existing, then the email exists
+      const exists = !error || !error.message.includes("Email not found");
       
-      // Email already registered error indicates the email exists
-      if (error?.message?.includes("User already registered")) {
-        exists = true;
+      if (exists) {
         setEmailExistsMessage("This email is already registered. Would you like to sign in or reset your password?");
       } else {
-        // If no error about existing user, then email is new
         setEmailExistsMessage(null);
       }
       
@@ -208,10 +182,15 @@ const Auth = () => {
 
         if (data.session) {
           // If session is present, user is auto-confirmed (dev mode)
-          toast.success("Registration successful! Logging you in...");
-          navigate("/dashboard");
+          toast.success("Registration successful! Redirecting to login...");
+          // Switch to login mode after successful signup
+          setIsLogin(true);
+          setPassword("");
         } else {
           toast.success("Registration successful! Please check your email for confirmation.");
+          // Switch to login mode after successful signup
+          setIsLogin(true);
+          setPassword("");
         }
       }
     } catch (error: any) {
