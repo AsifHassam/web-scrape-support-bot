@@ -50,7 +50,7 @@ serve(async (req) => {
     
     let memberData = null;
     
-    // If user exists, create or update team_members record with the correct member_id
+    // If user exists, check if they're already a team member before creating/updating
     if (user) {
       console.log(`User ${email} already exists with ID ${user.id}`);
       
@@ -66,16 +66,30 @@ serve(async (req) => {
         console.error("Error checking existing team member:", checkError);
       }
       
-      if (existingMember) {
+      // Also check if there's an entry with this user's member_id to prevent constraint violations
+      const { data: existingByMemberId, error: memberIdCheckError } = await supabase
+        .from("team_members")
+        .select("*")
+        .eq("member_id", user.id)
+        .eq("owner_id", ownerId)
+        .maybeSingle();
+        
+      if (memberIdCheckError) {
+        console.error("Error checking existing member by member_id:", memberIdCheckError);
+      }
+      
+      const existingTeamMember = existingMember || existingByMemberId;
+      
+      if (existingTeamMember) {
         // Update existing member
         const { data: updatedMember, error: updateError } = await supabase
           .from("team_members")
           .update({ 
             member_id: user.id, 
             status: "active",
-            role: role || existingMember.role
+            role: role || existingTeamMember.role
           })
-          .eq("id", existingMember.id)
+          .eq("id", existingTeamMember.id)
           .select()
           .single();
           
