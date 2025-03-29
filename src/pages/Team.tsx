@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,27 +47,55 @@ const Team = () => {
       try {
         setLoading(true);
         
-        // Get user's subscription tier
-        const { data: userData, error: userError } = await supabase
+        // Get user's subscription tier - FIX: Changed from single() to use array handling
+        const { data: userDataArray, error: userError } = await supabase
           .from("users_metadata")
           .select("payment_status")
-          .eq("id", user.id)
-          .single();
+          .eq("id", user.id);
           
         if (userError) throw userError;
         
-        const paymentStatus = userData.payment_status.toUpperCase();
-        setIsPro(paymentStatus === "PRO" || paymentStatus === "ENTERPRISE");
-        setSubscriptionTier(
-          paymentStatus === "PRO" ? "PRO" : 
-          paymentStatus === "ENTERPRISE" ? "ENTERPRISE" : 
-          paymentStatus === "STARTER" ? "STARTER" : "TRIAL"
-        );
+        // Handle case where no data or multiple rows are returned
+        if (!userDataArray || userDataArray.length === 0) {
+          // No user metadata found, default to TRIAL
+          console.log("No user metadata found, defaulting to TRIAL");
+          setIsPro(false);
+          setSubscriptionTier("TRIAL");
+        } else {
+          // Use the first row if multiple exist
+          const userData = userDataArray[0];
+          const paymentStatus = userData.payment_status.toUpperCase();
+          setIsPro(paymentStatus === "PRO" || paymentStatus === "ENTERPRISE");
+          setSubscriptionTier(
+            paymentStatus === "PRO" ? "PRO" : 
+            paymentStatus === "ENTERPRISE" ? "ENTERPRISE" : 
+            paymentStatus === "STARTER" ? "STARTER" : "TRIAL"
+          );
+        }
         
-        if (paymentStatus !== "PRO" && paymentStatus !== "ENTERPRISE") {
-          toast.error("Team feature is only available for PRO and ENTERPRISE plans");
-          navigate("/dashboard");
-          return;
+        // Check if user can access team features
+        if (subscriptionTier !== "PRO" && subscriptionTier !== "ENTERPRISE") {
+          // Check active subscriptions directly as another source of truth
+          const { data: subscriptions } = await supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .order("created_at", { ascending: false });
+            
+          const hasPremiumSubscription = subscriptions && subscriptions.length > 0 && 
+            (subscriptions[0].plan_name.includes("PRO") || 
+             subscriptions[0].plan_name.includes("Enterprise"));
+             
+          if (!hasPremiumSubscription) {
+            toast.error("Team feature is only available for PRO and ENTERPRISE plans");
+            navigate("/dashboard");
+            return;
+          } else {
+            // Update state based on subscription found
+            setIsPro(true);
+            setSubscriptionTier(subscriptions[0].plan_name.includes("PRO") ? "PRO" : "ENTERPRISE");
+          }
         }
         
         // Fetch all bots owned by the user
@@ -118,7 +145,7 @@ const Team = () => {
     };
     
     fetchUserAndTeam();
-  }, [user, navigate]);
+  }, [user, navigate, subscriptionTier]);
   
   const handleAddTeamMember = async (email: string, role: TeamMemberRole, selectedBots: string[]) => {
     if (!user) return;
