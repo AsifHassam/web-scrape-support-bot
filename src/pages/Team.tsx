@@ -194,56 +194,70 @@ const Team = () => {
       );
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send invitation');
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to send invitation');
+        } catch (parseError) {
+          throw new Error(`Failed to send invitation: ${errorText || response.statusText}`);
+        }
       }
       
-      const responseData = await response.json();
-      
-      if (responseData.memberData) {
-        const memberBots = selectedBots.map(botId => {
-          const bot = bots.find(b => b.id === botId);
-          return bot ? { id: bot.id, name: bot.name } : null;
-        }).filter(Boolean);
+      try {
+        const responseData = await response.json();
         
-        setTeamMembers([...teamMembers, { 
-          ...responseData.memberData, 
-          bots: memberBots 
-        } as TeamMember]);
-        
-        toast.success(`Invitation sent to ${email}`);
-      } else {
-        toast.success(responseData.message || `Team member operation completed`);
-        
-        const { data: refreshedMembers, error: refreshError } = await supabase
-          .from("team_members")
-          .select("*")
-          .eq("owner_id", user.id);
+        if (responseData.memberData) {
+          const memberBots = selectedBots.map(botId => {
+            const bot = bots.find(b => b.id === botId);
+            return bot ? { id: bot.id, name: bot.name } : null;
+          }).filter(Boolean);
           
-        if (!refreshError && refreshedMembers) {
-          const updatedTeamMembers = await Promise.all(refreshedMembers.map(async (member) => {
-            const { data: permissions } = await supabase
-              .from("bot_permissions")
-              .select("bot_id")
-              .eq("team_member_id", member.id);
-              
-            const memberBots = (permissions || []).map(p => {
-              const bot = bots.find(b => b.id === p.bot_id);
-              return bot ? { id: bot.id, name: bot.name } : null;
-            }).filter(Boolean);
+          setTeamMembers([...teamMembers, { 
+            ...responseData.memberData, 
+            bots: memberBots 
+          } as TeamMember]);
+          
+          toast.success(`Invitation sent to ${email}`);
+        } else {
+          toast.success(responseData.message || `Team member operation completed`);
+          
+          const { data: refreshedMembers, error: refreshError } = await supabase
+            .from("team_members")
+            .select("*")
+            .eq("owner_id", user.id);
             
-            return {
-              ...member,
-              bots: memberBots
-            };
-          }));
-          
-          const ownerMember = teamMembers.find(m => m.isOwner);
-          setTeamMembers([
-            ...(ownerMember ? [ownerMember] : []), 
-            ...updatedTeamMembers as TeamMember[]
-          ]);
+          if (!refreshError && refreshedMembers) {
+            const updatedTeamMembers = await Promise.all(refreshedMembers.map(async (member) => {
+              const { data: permissions } = await supabase
+                .from("bot_permissions")
+                .select("bot_id")
+                .eq("team_member_id", member.id);
+                
+              const memberBots = (permissions || []).map(p => {
+                const bot = bots.find(b => b.id === p.bot_id);
+                return bot ? { id: bot.id, name: bot.name } : null;
+              }).filter(Boolean);
+              
+              return {
+                ...member,
+                bots: memberBots
+              };
+            }));
+            
+            const ownerMember = teamMembers.find(m => m.isOwner);
+            setTeamMembers([
+              ...(ownerMember ? [ownerMember] : []), 
+              ...updatedTeamMembers as TeamMember[]
+            ]);
+          }
         }
+      } catch (jsonError) {
+        console.error("Error parsing response as JSON:", jsonError);
+        toast.success("Operation completed, but response could not be parsed");
+        
+        fetchTeamMembers();
       }
       
       setAddDialogOpen(false);
@@ -321,6 +335,63 @@ const Team = () => {
   const openRemoveDialog = (member: TeamMember) => {
     setSelectedMember(member);
     setRemoveDialogOpen(true);
+  };
+
+  const fetchTeamMembers = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: botsData, error: botsError } = await supabase
+        .from("bots")
+        .select("id, name")
+        .eq("user_id", user.id);
+        
+      if (botsError) throw botsError;
+      setBots(botsData || []);
+      
+      const { data: membersData, error: membersError } = await supabase
+        .from("team_members")
+        .select("*")
+        .eq("owner_id", user.id);
+        
+      if (membersError) throw membersError;
+      
+      const teamMembersWithBots = await Promise.all((membersData || []).map(async (member) => {
+        const { data: permissions, error: permissionsError } = await supabase
+          .from("bot_permissions")
+          .select("bot_id")
+          .eq("team_member_id", member.id);
+          
+        if (permissionsError) throw permissionsError;
+        
+        const memberBots = (permissions || []).map(p => {
+          const bot = botsData?.find(b => b.id === p.bot_id);
+          return bot ? { id: bot.id, name: bot.name } : null;
+        }).filter(Boolean);
+        
+        return {
+          ...member,
+          bots: memberBots
+        };
+      }));
+      
+      const ownerMember: TeamMember = {
+        id: 'owner-' + user.id,
+        email: user.email || '',
+        member_id: user.id,
+        status: 'active' as TeamMemberStatus,
+        role: 'admin' as TeamMemberRole,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        bots: botsData || [],
+        isOwner: true
+      };
+      
+      setTeamMembers([ownerMember, ...teamMembersWithBots as TeamMember[]]);
+    } catch (error: any) {
+      console.error("Error fetching team members:", error);
+      toast.error(`Failed to load team members: ${error.message}`);
+    }
   };
 
   if (!isPro) {
