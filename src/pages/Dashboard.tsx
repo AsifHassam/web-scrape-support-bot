@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +43,7 @@ const Dashboard = () => {
   const [totalMessages, setTotalMessages] = useState(0);
   const [totalConversations, setTotalConversations] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [liveBotCount, setLiveBotCount] = useState(0);
   const navigate = useNavigate();
 
   const getSubscriptionTier = (): SubscriptionTier => {
@@ -102,6 +102,9 @@ const Dashboard = () => {
           console.error("Error fetching bots:", botsError);
           throw botsError;
         }
+        
+        const liveBotCount = (botsData || []).filter(bot => bot.is_live).length;
+        setLiveBotCount(liveBotCount);
         
         const botsWithCounts = await Promise.all((botsData || []).map(async (bot) => {
           try {
@@ -208,8 +211,6 @@ const Dashboard = () => {
     }
   };
 
-  // Remove the handleBotStatusChange function since we don't want to change bot status from here
-
   const formatBotType = (type?: string) => {
     if (!type) return "";
     
@@ -219,8 +220,7 @@ const Dashboard = () => {
       .join(' ');
   };
 
-  const liveBots = bots.filter(bot => bot.is_live).length;
-  const subscriptionTier = getSubscriptionTier();
+  const liveBots = liveBotCount;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -230,7 +230,7 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4">
             <Badge variant="outline" className="flex items-center gap-1 border-primary/50">
               <Crown className="h-3 w-3 text-primary" />
-              <span className="text-xs font-medium">{subscriptionTier}</span>
+              <span className="text-xs font-medium">{getSubscriptionTier()}</span>
             </Badge>
             <ThemeToggle />
             <span className="text-sm text-gray-600 dark:text-gray-300">
@@ -345,7 +345,7 @@ const Dashboard = () => {
                 Subscription Usage
               </h2>
               <SubscriptionStats 
-                tier={subscriptionTier}
+                tier={getSubscriptionTier()}
                 messageCount={totalMessages}
                 conversationCount={totalConversations}
                 botCount={liveBots}
@@ -359,7 +359,7 @@ const Dashboard = () => {
                 Team
               </h2>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                {subscriptionTier === 'PRO' || subscriptionTier === 'ENTERPRISE' ? (
+                {getSubscriptionTier() === 'PRO' || getSubscriptionTier() === 'ENTERPRISE' ? (
                   <div className="space-y-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Manage your team members and their access

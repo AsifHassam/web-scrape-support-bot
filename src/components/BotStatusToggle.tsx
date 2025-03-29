@@ -29,6 +29,14 @@ const BotStatusToggle = ({
   const { toast } = useToast();
   const maxLiveBots = SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots;
 
+  // Enforce the live bot limit when the component mounts
+  useEffect(() => {
+    if (isLive && liveBotCount > maxLiveBots) {
+      // Force deactivate if somehow the bot is live but exceeds the limit
+      handleToggle(false, {} as React.MouseEvent);
+    }
+  }, []);
+
   // Re-check live bot count when trying to activate a bot
   useEffect(() => {
     if (!isLive && upgradeDialogOpen) {

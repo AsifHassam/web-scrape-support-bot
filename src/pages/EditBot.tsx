@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,14 +88,16 @@ const EditBot = () => {
       if (!user?.id) return;
       
       try {
-        const { data, error, count } = await supabase
+        const { data, error } = await supabase
           .from("bots")
-          .select("*", { count: 'exact' })
-          .eq("user_id", user.id)
-          .eq("is_live", true);
+          .select("id, is_live")
+          .eq("user_id", user.id);
           
         if (error) throw error;
-        setLiveBotCount(count || 0);
+        
+        // Count only bots that are actually live
+        const liveBots = (data || []).filter(bot => bot.is_live).length;
+        setLiveBotCount(liveBots);
       } catch (error) {
         console.error("Error fetching live bot count:", error);
       }

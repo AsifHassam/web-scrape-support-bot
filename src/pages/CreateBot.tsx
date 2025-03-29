@@ -203,6 +203,12 @@ const CreateBot = () => {
     if (step === 3) {
       setLoading(true);
       try {
+        if (liveBotCount >= SUBSCRIPTION_LIMITS[userSubscription].maxLiveBots) {
+          setUpgradeDialogOpen(true);
+          setLoading(false);
+          return;
+        }
+
         const { data: botData, error: botError } = await supabase
           .from("bots")
           .insert({
