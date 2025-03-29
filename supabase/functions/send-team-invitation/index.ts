@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
@@ -161,30 +160,73 @@ serve(async (req) => {
 
     // For new users, create a pending team member record before sending the invitation
     if (ownerId) {
-      // Generate a temporary UUID for the member_id
-      const temporaryId = crypto.randomUUID();
-      
-      const { data: pendingMember, error: memberError } = await supabase
+      // Check if a pending invitation already exists for this email
+      const { data: existingInvite, error: checkInviteError } = await supabase
         .from("team_members")
-        .insert({
-          owner_id: ownerId,
-          email: email.toLowerCase(),
-          member_id: temporaryId, // Using temporary ID to satisfy not-null constraint
-          role: role || "member",
-          status: "pending"
-        })
-        .select()
-        .single();
+        .select("*")
+        .eq("email", email.toLowerCase())
+        .eq("owner_id", ownerId)
+        .eq("status", "pending")
+        .maybeSingle();
         
-      if (memberError) {
-        console.error("Error creating pending team member:", memberError);
-        throw memberError;
+      if (checkInviteError) {
+        console.error("Error checking existing invitation:", checkInviteError);
       }
       
-      memberData = pendingMember;
+      if (existingInvite) {
+        console.log(`Found existing invitation for ${email}, will update it`);
+        
+        // Update the existing invitation with new role/permissions
+        const { data: updatedInvite, error: updateError } = await supabase
+          .from("team_members")
+          .update({
+            role: role || existingInvite.role,
+            // Keep the same temporary ID
+          })
+          .eq("id", existingInvite.id)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error("Error updating invitation:", updateError);
+          throw updateError;
+        }
+        
+        memberData = updatedInvite;
+      } else {
+        // Generate a truly unique temporary ID with a prefix to avoid conflicts with real user IDs
+        const temporaryId = `pending_${crypto.randomUUID()}`;
+        
+        // Create a new pending team member
+        const { data: pendingMember, error: memberError } = await supabase
+          .from("team_members")
+          .insert({
+            owner_id: ownerId,
+            email: email.toLowerCase(),
+            member_id: temporaryId, // Using prefixed temporary ID to avoid conflicts
+            role: role || "member",
+            status: "pending"
+          })
+          .select()
+          .single();
+          
+        if (memberError) {
+          console.error("Error creating pending team member:", memberError);
+          throw memberError;
+        }
+        
+        memberData = pendingMember;
+      }
       
-      // Add bot permissions if selected
+      // Add or update bot permissions if selected
       if (selectedBots && selectedBots.length > 0 && memberData) {
+        // First, delete any existing permissions
+        await supabase
+          .from("bot_permissions")
+          .delete()
+          .eq("team_member_id", memberData.id);
+          
+        // Then add the new ones
         const botPermissions = selectedBots.map(botId => ({
           team_member_id: memberData.id,
           bot_id: botId
