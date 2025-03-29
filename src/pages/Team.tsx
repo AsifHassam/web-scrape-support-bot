@@ -26,6 +26,7 @@ export interface TeamMember {
     id: string;
     name: string;
   }[];
+  isOwner?: boolean;
 }
 
 const Team = () => {
@@ -47,7 +48,6 @@ const Team = () => {
       try {
         setLoading(true);
         
-        // Get user's subscription tier - FIX: Changed from single() to use array handling
         const { data: userDataArray, error: userError } = await supabase
           .from("users_metadata")
           .select("payment_status")
@@ -55,27 +55,22 @@ const Team = () => {
           
         if (userError) throw userError;
         
-        // Handle case where no data or multiple rows are returned
+        let userIsPro = false;
+        let userSubscriptionTier: SubscriptionTier = "TRIAL";
+        
         if (!userDataArray || userDataArray.length === 0) {
-          // No user metadata found, default to TRIAL
           console.log("No user metadata found, defaulting to TRIAL");
-          setIsPro(false);
-          setSubscriptionTier("TRIAL");
         } else {
-          // Use the first row if multiple exist
           const userData = userDataArray[0];
           const paymentStatus = userData.payment_status.toUpperCase();
-          setIsPro(paymentStatus === "PRO" || paymentStatus === "ENTERPRISE");
-          setSubscriptionTier(
+          userIsPro = paymentStatus === "PRO" || paymentStatus === "ENTERPRISE";
+          userSubscriptionTier = 
             paymentStatus === "PRO" ? "PRO" : 
             paymentStatus === "ENTERPRISE" ? "ENTERPRISE" : 
-            paymentStatus === "STARTER" ? "STARTER" : "TRIAL"
-          );
+            paymentStatus === "STARTER" ? "STARTER" : "TRIAL";
         }
         
-        // Check if user can access team features
-        if (subscriptionTier !== "PRO" && subscriptionTier !== "ENTERPRISE") {
-          // Check active subscriptions directly as another source of truth
+        if (userSubscriptionTier !== "PRO" && userSubscriptionTier !== "ENTERPRISE") {
           const { data: subscriptions } = await supabase
             .from("subscriptions")
             .select("*")
@@ -92,13 +87,14 @@ const Team = () => {
             navigate("/dashboard");
             return;
           } else {
-            // Update state based on subscription found
-            setIsPro(true);
-            setSubscriptionTier(subscriptions[0].plan_name.includes("PRO") ? "PRO" : "ENTERPRISE");
+            userIsPro = true;
+            userSubscriptionTier = subscriptions[0].plan_name.includes("PRO") ? "PRO" : "ENTERPRISE";
           }
         }
         
-        // Fetch all bots owned by the user
+        setIsPro(userIsPro);
+        setSubscriptionTier(userSubscriptionTier);
+        
         const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("id, name")
@@ -107,7 +103,6 @@ const Team = () => {
         if (botsError) throw botsError;
         setBots(botsData || []);
         
-        // Fetch all team members
         const { data: membersData, error: membersError } = await supabase
           .from("team_members")
           .select("*")
@@ -115,7 +110,6 @@ const Team = () => {
           
         if (membersError) throw membersError;
         
-        // Fetch bot permissions for each team member
         const teamMembersWithBots = await Promise.all((membersData || []).map(async (member) => {
           const { data: permissions, error: permissionsError } = await supabase
             .from("bot_permissions")
@@ -135,7 +129,19 @@ const Team = () => {
           };
         }));
         
-        setTeamMembers(teamMembersWithBots as TeamMember[]);
+        const ownerMember: TeamMember = {
+          id: 'owner-' + user.id,
+          email: user.email || '',
+          member_id: user.id,
+          status: 'active' as TeamMemberStatus,
+          role: 'admin' as TeamMemberRole,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          bots: botsData || [],
+          isOwner: true
+        };
+        
+        setTeamMembers([ownerMember, ...teamMembersWithBots as TeamMember[]]);
       } catch (error: any) {
         console.error("Error fetching team data:", error);
         toast.error(`Failed to load team data: ${error.message}`);
@@ -145,33 +151,31 @@ const Team = () => {
     };
     
     fetchUserAndTeam();
-  }, [user, navigate, subscriptionTier]);
+  }, [user, navigate]);
   
   const handleAddTeamMember = async (email: string, role: TeamMemberRole, selectedBots: string[]) => {
     if (!user) return;
     
     try {
-      // Check if we have reached the member limit based on plan
-      const memberLimit = subscriptionTier === "ENTERPRISE" ? 10 : 5; // PRO: 5, ENTERPRISE: 10
+      const memberLimit = subscriptionTier === "ENTERPRISE" ? 10 : 5;
       if (teamMembers.length >= memberLimit) {
         toast.error(`Your plan allows a maximum of ${memberLimit} team members`);
         return;
       }
       
-      // Add team member - Fix: provide null for member_id as it will be populated when the user signs up
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .insert({
           owner_id: user.id,
           email: email.toLowerCase(),
           role,
-          member_id: null // Explicitly set to null for pending invites
+          member_id: null
         })
         .select()
         .single();
         
       if (memberError) {
-        if (memberError.code === "23505") { // Unique violation
+        if (memberError.code === "23505") {
           toast.error("This email is already a team member");
         } else {
           throw memberError;
@@ -179,7 +183,6 @@ const Team = () => {
         return;
       }
       
-      // Add bot permissions
       if (selectedBots.length > 0) {
         const botPermissions = selectedBots.map(botId => ({
           team_member_id: memberData.id,
@@ -193,39 +196,31 @@ const Team = () => {
         if (permissionsError) throw permissionsError;
       }
       
-      // Send invitation email using Edge Function
-      try {
-        const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
-        
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-team-invitation`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify({
-              email,
-              inviterEmail: user.email || "Team Owner",
-              signUpUrl: inviteUrl
-            })
-          }
-        );
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to send invitation');
+      const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-team-invitation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            email,
+            inviterEmail: user.email || "Team Owner",
+            signUpUrl: inviteUrl
+          })
         }
-        
-        toast.success(`Invitation sent to ${email}`);
-      } catch (inviteError: any) {
-        console.error("Error sending invitation:", inviteError);
-        toast.error(`Invitation email could not be sent: ${inviteError.message}`);
-        // We don't throw here because we already created the user in the database
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send invitation');
       }
       
-      // Refresh team members list
+      toast.success(`Invitation sent to ${email}`);
+      
       const { data: refreshedMemberData, error: refreshError } = await supabase
         .from("team_members")
         .select("*")
@@ -234,7 +229,6 @@ const Team = () => {
         
       if (refreshError) throw refreshError;
       
-      // Add bot data to refreshed member
       const memberBots = selectedBots.map(botId => {
         const bot = bots.find(b => b.id === botId);
         return bot ? { id: bot.id, name: bot.name } : null;
@@ -250,7 +244,6 @@ const Team = () => {
   
   const handleUpdateMemberBots = async (memberId: string, selectedBots: string[]) => {
     try {
-      // First delete all existing permissions
       const { error: deleteError } = await supabase
         .from("bot_permissions")
         .delete()
@@ -258,7 +251,6 @@ const Team = () => {
         
       if (deleteError) throw deleteError;
       
-      // Then add new permissions
       if (selectedBots.length > 0) {
         const botPermissions = selectedBots.map(botId => ({
           team_member_id: memberId,
@@ -272,7 +264,6 @@ const Team = () => {
         if (insertError) throw insertError;
       }
       
-      // Update local state
       setTeamMembers(teamMembers.map(member => {
         if (member.id === memberId) {
           const memberBots = selectedBots.map(botId => {
@@ -296,7 +287,6 @@ const Team = () => {
     if (!selectedMember) return;
     
     try {
-      // Delete team member (bot permissions will be cascaded)
       const { error } = await supabase
         .from("team_members")
         .delete()
@@ -304,7 +294,6 @@ const Team = () => {
         
       if (error) throw error;
       
-      // Update local state
       setTeamMembers(teamMembers.filter(member => member.id !== selectedMember.id));
       setRemoveDialogOpen(false);
       setSelectedMember(null);
@@ -322,7 +311,7 @@ const Team = () => {
   };
 
   if (!isPro) {
-    return null; // Already redirected in useEffect
+    return null;
   }
 
   return (

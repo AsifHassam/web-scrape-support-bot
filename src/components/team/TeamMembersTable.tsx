@@ -1,5 +1,5 @@
 
-import { Check, Clock, Edit, Trash2, UserCog, UserPlus } from "lucide-react";
+import { Check, Clock, Edit, Shield, Trash2, UserCog, UserPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -53,8 +53,18 @@ const TeamMembersTable = ({
         </TableHeader>
         <TableBody>
           {members.map((member) => (
-            <TableRow key={member.id}>
-              <TableCell className="font-medium">{member.email}</TableCell>
+            <TableRow key={member.id} className={member.isOwner ? "bg-primary/5" : ""}>
+              <TableCell className="font-medium">
+                <div className="flex items-center">
+                  {member.email}
+                  {member.isOwner && (
+                    <span className="ml-2 text-xs text-primary font-semibold flex items-center">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Owner
+                    </span>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   member.status === 'active' 
@@ -108,20 +118,24 @@ const TeamMembersTable = ({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleUpdateClick(member)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onRemoveMember(member)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!member.isOwner && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateClick(member)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onRemoveMember(member)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </TableCell>
             </TableRow>
