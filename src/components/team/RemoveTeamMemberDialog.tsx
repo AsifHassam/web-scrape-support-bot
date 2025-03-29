@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TeamMember } from "@/pages/Team";
+import { useState } from "react";
 
 interface RemoveTeamMemberDialogProps {
   open: boolean;
@@ -23,6 +24,19 @@ const RemoveTeamMemberDialog = ({
   member,
   onRemove
 }: RemoveTeamMemberDialogProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRemove = async () => {
+    if (!member) return;
+    
+    try {
+      setIsSubmitting(true);
+      await onRemove();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -33,10 +47,18 @@ const RemoveTeamMemberDialog = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex space-x-2 justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onRemove}>
+          <Button 
+            variant="destructive" 
+            onClick={handleRemove}
+            disabled={isSubmitting}
+          >
             Remove
           </Button>
         </DialogFooter>

@@ -131,14 +131,15 @@ const Team = () => {
         return;
       }
       
-      // Add team member
+      // Add team member - Fix: provide null for member_id as it will be populated when the user signs up
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
-        .insert([{
+        .insert({
           owner_id: user.id,
           email: email.toLowerCase(),
-          role
-        }])
+          role,
+          member_id: null // Explicitly set to null for pending invites
+        })
         .select()
         .single();
         
@@ -165,10 +166,37 @@ const Team = () => {
         if (permissionsError) throw permissionsError;
       }
       
-      // Send invitation email (we'll implement this using an edge function)
-      await sendInvitationEmail(email, user.email || "Team Owner");
-      
-      toast.success(`Invitation sent to ${email}`);
+      // Send invitation email using Edge Function
+      try {
+        const inviteUrl = `${window.location.origin}/auth?invite=true&email=${encodeURIComponent(email)}`;
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-team-invitation`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              email,
+              inviterEmail: user.email || "Team Owner",
+              signUpUrl: inviteUrl
+            })
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send invitation');
+        }
+        
+        toast.success(`Invitation sent to ${email}`);
+      } catch (inviteError: any) {
+        console.error("Error sending invitation:", inviteError);
+        toast.error(`Invitation email could not be sent: ${inviteError.message}`);
+        // We don't throw here because we already created the user in the database
+      }
       
       // Refresh team members list
       const { data: refreshedMemberData, error: refreshError } = await supabase
@@ -259,12 +287,6 @@ const Team = () => {
       console.error("Error removing team member:", error);
       toast.error(`Failed to remove team member: ${error.message}`);
     }
-  };
-  
-  // Function to send invitation email
-  const sendInvitationEmail = async (email: string, inviterEmail: string) => {
-    // This will be implemented with an edge function
-    toast.info("Invitation email functionality will be implemented");
   };
   
   const openRemoveDialog = (member: TeamMember) => {
