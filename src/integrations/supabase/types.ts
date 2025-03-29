@@ -65,6 +65,42 @@ export type Database = {
           },
         ]
       }
+      bot_permissions: {
+        Row: {
+          bot_id: string
+          created_at: string
+          id: string
+          team_member_id: string
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          id?: string
+          team_member_id: string
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_permissions_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_permissions_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bots: {
         Row: {
           bot_type: string | null
@@ -323,6 +359,39 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          member_id: string
+          owner_id: string
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          member_id: string
+          owner_id: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          member_id?: string
+          owner_id?: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -376,7 +445,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_bot_access: {
+        Args: {
+          user_id: string
+          bot_id_param: string
+        }
+        Returns: boolean
+      }
       is_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_owner: {
         Args: {
           user_id: string
         }
