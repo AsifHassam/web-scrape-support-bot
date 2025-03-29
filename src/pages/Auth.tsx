@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 // Production URL for redirects
 const SITE_URL = window.location.origin || 'https://web-scrape-support-bot.lovable.app';
@@ -52,10 +53,7 @@ const Auth = () => {
   }, [cooldownActive, cooldownSeconds]);
 
   useEffect(() => {
-    console.log("Auth page: checking user state", user?.email);
-    
     if (user) {
-      console.log("User is logged in, redirecting to dashboard");
       navigate("/dashboard");
       return;
     }
@@ -66,19 +64,13 @@ const Auth = () => {
     const refreshToken = params.get('refresh_token');
     const type = params.get('type');
     
-    console.log("Auth page URL params:", { type, hasToken: !!resetToken });
-    
     // Handle callback URLs with tokens (for password resets, email confirmation)
     const handleAuthCallback = async () => {
       if (resetToken && type === 'recovery') {
         // This is a password reset flow
-        console.log("Handling password reset flow");
-        // Show password reset form
         setIsForgotPassword(true);
       } else if (resetToken && refreshToken) {
         // This is probably an email confirmation or OAuth callback
-        console.log("Detected auth tokens in URL, exchanging session");
-        
         try {
           const { data, error } = await supabase.auth.setSession({
             access_token: resetToken,
@@ -86,10 +78,8 @@ const Auth = () => {
           });
           
           if (error) {
-            console.error("Error setting session from URL params:", error);
             toast.error("Authentication failed. Please try signing in again.");
           } else if (data.session) {
-            console.log("Successfully set session from URL params");
             toast.success("Authentication successful!");
             navigate("/dashboard");
           }
@@ -118,7 +108,6 @@ const Auth = () => {
       setLoading(true);
       const { error } = await signIn(email, password);
       if (error) {
-        console.error("Auto login failed:", error);
         return;
       }
       
@@ -156,11 +145,13 @@ const Auth = () => {
     try {
       setIsCheckingEmail(true);
       
-      // Try to sign up with an empty password to check if the email exists
-      // This is a technique to use Supabase's auth system to check for existing users
+      // Use direct signup check but with a random password
+      // This is more reliable than other methods
+      const randomPassword = Math.random().toString(36).slice(-10);
       const { error } = await supabase.auth.signUp({
         email,
-        password: "temporary_password_for_check_only",
+        password: randomPassword,
+        options: { emailRedirectTo: `${SITE_URL}/auth` }
       });
       
       let exists = false;
@@ -178,6 +169,7 @@ const Auth = () => {
         setCooldownActive(true);
         toast.error(`Rate limit reached. Please try again in ${waitSeconds} seconds.`);
       } else {
+        // If no error about existing user, then email is new
         setEmailExistsMessage(null);
       }
       
@@ -187,20 +179,6 @@ const Auth = () => {
       return false;
     } finally {
       setIsCheckingEmail(false);
-    }
-  };
-
-  const verifyUserEmailManually = async (email: string) => {
-    try {
-      console.log("Attempting to manually verify email:", email);
-      
-      // In development, we'd have logic to manually verify the user
-      // This is just a placeholder - in production, users should verify through email
-      
-      return true;
-    } catch (error) {
-      console.error("Error verifying email manually:", error);
-      return false;
     }
   };
 
@@ -218,7 +196,6 @@ const Auth = () => {
 
     try {
       if (isForgotPassword) {
-        console.log("Sending password reset email to:", email);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${SITE_URL}/auth?reset=true`,
         });
@@ -231,21 +208,10 @@ const Auth = () => {
         setResetPasswordSuccess(true);
         toast.success("Password reset email sent! Check your inbox.");
       } else if (isLogin) {
-        console.log("Attempting to login with email:", email);
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message?.includes("Email not confirmed")) {
             toast.error("Please confirm your email before logging in");
-            
-            // In development environment only, offer to manually verify the email
-            if (process.env.NODE_ENV === 'development') {
-              const manualVerification = await verifyUserEmailManually(email);
-              if (manualVerification) {
-                toast.success("Email verified manually. Please try logging in again.");
-                // Trigger auto-login after a delay
-                setTimeout(() => handleAutoLogin(), 1500);
-              }
-            }
           } else if (error.message?.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
           } else {
@@ -256,7 +222,7 @@ const Auth = () => {
         toast.success("Successfully logged in!");
         navigate("/dashboard");
       } else {
-        // Check if email exists before attempting signup
+        // Always check if email exists before attempting signup
         const emailExists = await checkEmailExists(email);
         
         if (emailExists) {
@@ -271,26 +237,21 @@ const Auth = () => {
           return;
         }
         
-        console.log("Attempting to sign up with email:", email);
         const { error, data } = await signUp(email, password);
         if (error) {
           if (error.message?.includes("User already registered")) {
             toast.error("This email is already registered");
+            setEmailExistsMessage("This email is already registered. Would you like to sign in or reset your password?");
           } else {
             handleRateLimitingError(error);
           }
           throw error;
         }
 
-        // Dev environment: try to auto-verify email
-        if (process.env.NODE_ENV === 'development' && data?.user?.id) {
-          const verified = await verifyUserEmailManually(email);
-          if (verified) {
-            toast.success("Email verified automatically in development. Logging you in...");
-            setAutoLoginAfterSignup(true);
-          } else {
-            toast.success("Registration successful! Please check your email for confirmation.");
-          }
+        if (data.session) {
+          // If session is present, user is auto-confirmed (dev mode)
+          toast.success("Registration successful! Logging you in...");
+          navigate("/dashboard");
         } else {
           toast.success("Registration successful! Please check your email for confirmation.");
         }
