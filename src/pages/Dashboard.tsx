@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import SubscriptionStats from "@/components/SubscriptionStats";
 import { SubscriptionTier, SUBSCRIPTION_LIMITS } from "@/lib/types/billing";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Bot {
   id: string;
@@ -33,6 +35,12 @@ interface UserProfile {
   payment_status: string;
 }
 
+interface Subscription {
+  id: string;
+  plan_name: string;
+  status: string;
+}
+
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [bots, setBots] = useState<Bot[]>([]);
@@ -43,10 +51,19 @@ const Dashboard = () => {
   const [totalMessages, setTotalMessages] = useState(0);
   const [totalConversations, setTotalConversations] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [liveBotCount, setLiveBotCount] = useState(0);
   const navigate = useNavigate();
 
   const getSubscriptionTier = (): SubscriptionTier => {
+    // First check active subscription if available
+    if (subscription && subscription.status === 'active') {
+      if (subscription.plan_name.toUpperCase().includes('PRO')) return 'PRO';
+      if (subscription.plan_name.toUpperCase().includes('ENTERPRISE')) return 'ENTERPRISE';
+      if (subscription.plan_name.toUpperCase().includes('STARTER')) return 'STARTER';
+    }
+    
+    // Fall back to payment_status if no active subscription or for TRIAL users
     if (!userProfile) return 'TRIAL';
     
     const status = userProfile.payment_status.toUpperCase();
@@ -65,6 +82,7 @@ const Dashboard = () => {
           return;
         }
         
+        // Fetch user profile (payment status)
         const { data: profileData, error: profileError } = await supabase
           .from("users_metadata")
           .select("*")
@@ -92,6 +110,23 @@ const Dashboard = () => {
           setUserProfile(profileData as UserProfile);
         }
         
+        // Fetch active subscription
+        const { data: subscriptionData, error: subscriptionError } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .maybeSingle();
+          
+        if (!subscriptionError && subscriptionData) {
+          setSubscription(subscriptionData as Subscription);
+          console.log("Active subscription found:", subscriptionData);
+        } else if (subscriptionError) {
+          console.error("Error fetching subscription:", subscriptionError);
+        }
+        
+        // Fetch bots
         const { data: botsData, error: botsError } = await supabase
           .from("bots")
           .select("*")
@@ -105,7 +140,9 @@ const Dashboard = () => {
         
         const liveBotCount = (botsData || []).filter(bot => bot.is_live).length;
         setLiveBotCount(liveBotCount);
-        console.log(`Dashboard - Live bot count: ${liveBotCount}, Max allowed: ${SUBSCRIPTION_LIMITS[getSubscriptionTier()].maxLiveBots}`);
+        
+        const currentTier = getSubscriptionTier();
+        console.log(`Dashboard - Live bot count: ${liveBotCount}, Max allowed: ${SUBSCRIPTION_LIMITS[currentTier].maxLiveBots}, Tier: ${currentTier}`);
         
         const botsWithCounts = await Promise.all((botsData || []).map(async (bot) => {
           try {
@@ -129,6 +166,7 @@ const Dashboard = () => {
         
         setBots(botsWithCounts);
         
+        // Fetch message count
         const { count: messageCount, error: messageError } = await supabase
           .from("messages")
           .select("*", { count: 'exact', head: true });
@@ -139,6 +177,7 @@ const Dashboard = () => {
           console.error("Error fetching message count:", messageError);
         }
         
+        // Fetch conversation count
         const { count: conversationCount, error: conversationError } = await supabase
           .from("conversations")
           .select("*", { count: 'exact', head: true });
@@ -222,6 +261,7 @@ const Dashboard = () => {
   };
 
   const liveBots = liveBotCount;
+  const currentTier = getSubscriptionTier();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -231,12 +271,17 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4">
             <Badge variant="outline" className="flex items-center gap-1 border-primary/50">
               <Crown className="h-3 w-3 text-primary" />
-              <span className="text-xs font-medium">{getSubscriptionTier()}</span>
+              <span className="text-xs font-medium">{currentTier}</span>
             </Badge>
             <ThemeToggle />
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              {user?.email}
-            </span>
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                {user?.email}
+              </span>
+            </div>
             <Button variant="outline" size="sm" onClick={() => navigate("/profile")}>
               <User className="h-4 w-4 mr-2" />
               Profile
@@ -346,7 +391,7 @@ const Dashboard = () => {
                 Subscription Usage
               </h2>
               <SubscriptionStats 
-                tier={getSubscriptionTier()}
+                tier={currentTier}
                 messageCount={totalMessages}
                 conversationCount={totalConversations}
                 botCount={liveBots}
@@ -360,7 +405,7 @@ const Dashboard = () => {
                 Team
               </h2>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                {getSubscriptionTier() === 'PRO' || getSubscriptionTier() === 'ENTERPRISE' ? (
+                {currentTier === 'PRO' || currentTier === 'ENTERPRISE' ? (
                   <div className="space-y-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Manage your team members and their access
